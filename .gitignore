@@ -360,3 +360,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/resources/skk-jisyo.l.gz
+/resources/skk-jisyo.jinmei.gz
