@@ -17,6 +17,26 @@ internal static partial class NativeMethods
     internal const int VK_LWIN = 0x5B;
     internal const int VK_RWIN = 0x5C;
 
+    [Flags]
+    internal enum KbdLlFlags : uint
+    {
+        LLKHF_EXTENDED = 0x01,
+        LLKHF_LOWER_IL_INJECTED = 0x02,
+        LLKHF_INJECTED = 0x10,
+        LLKHF_ALTDOWN = 0x20,
+        LLKHF_UP = 0x80,
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct KBDLLHOOKSTRUCT
+    {
+        internal uint vkCode;
+        internal uint scanCode;
+        internal KbdLlFlags flags;
+        internal uint time;
+        internal UIntPtr dwExtraInfo;
+    }
+
     internal delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
 
     [LibraryImport("user32.dll", SetLastError = true, EntryPoint = "SetWindowsHookExW")]

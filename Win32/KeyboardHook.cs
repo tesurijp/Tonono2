@@ -31,17 +31,27 @@ public sealed class KeyboardHook : IDisposable
         if (nCode >= 0)
         {
             var msg = wParam.ToInt32();
+
             var isKeyDown = msg == NativeMethods.WM_KEYDOWN || msg == NativeMethods.WM_SYSKEYDOWN;
             var isKeyUp = msg == NativeMethods.WM_KEYUP || msg == NativeMethods.WM_SYSKEYUP;
 
             if (isKeyDown || isKeyUp)
             {
-                var vkCode = Marshal.ReadInt32(lParam);
-                var args = new KeyboardKeyEventArgs(vkCode, isKeyDown);
-                KeyIntercepted?.Invoke(this, args);
-                if (args.Handled) return 1;
+                var hook = Marshal.PtrToStructure<NativeMethods.KBDLLHOOKSTRUCT>(lParam);
+
+                if ((hook.flags & NativeMethods.KbdLlFlags.LLKHF_INJECTED) == 0)
+                {
+                    var args = new KeyboardKeyEventArgs((int)hook.vkCode, isKeyDown);
+                    KeyIntercepted?.Invoke(this, args);
+
+                    if (args.Handled)
+                    {
+                        return 1;
+                    }
+                }
             }
         }
+
         return NativeMethods.CallNextHookEx(_hookId, nCode, wParam, lParam);
     }
 
