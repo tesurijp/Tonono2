@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using static Tonono2.Win32.NativeConstants;
 
 namespace Tonono2.Win32;
 
@@ -23,7 +24,7 @@ public sealed class KeyboardHook : IDisposable
         _proc = HookCallback;
         using var curProcess = Process.GetCurrentProcess();
         using var curModule = curProcess.MainModule;
-        _hookId = NativeMethods.SetWindowsHookEx(NativeMethods.WH_KEYBOARD_LL, _proc, NativeMethods.GetModuleHandle(curModule?.ModuleName), 0);
+        _hookId = NativeMethods.SetWindowsHookEx(WH_KEYBOARD_LL, _proc, NativeMethods.GetModuleHandle(curModule?.ModuleName), 0);
     }
 
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
@@ -32,8 +33,8 @@ public sealed class KeyboardHook : IDisposable
         {
             var msg = wParam.ToInt32();
 
-            var isKeyDown = msg == NativeMethods.WM_KEYDOWN || msg == NativeMethods.WM_SYSKEYDOWN;
-            var isKeyUp = msg == NativeMethods.WM_KEYUP || msg == NativeMethods.WM_SYSKEYUP;
+            var isKeyDown = msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN;
+            var isKeyUp = msg == WM_KEYUP || msg == WM_SYSKEYUP;
 
             if (isKeyDown || isKeyUp)
             {

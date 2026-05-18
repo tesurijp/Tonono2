@@ -1,4 +1,5 @@
 using System;
+using static Tonono2.Win32.NativeConstants;
 
 namespace Tonono2.Win32;
 
@@ -21,7 +22,7 @@ public static class WindowPositioner
             NativeMethods.GetCursorPos(out pt);
         }
 
-        var hMonitor = NativeMethods.MonitorFromPoint(pt, NativeMethods.MONITOR_DEFAULTTONEAREST);
+        var hMonitor = NativeMethods.MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
         var mi = new NativeMethods.MONITORINFO { cbSize = System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.MONITORINFO>() };
 
         if (NativeMethods.GetMonitorInfo(hMonitor, ref mi))

@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using static Tonono2.Win32.NativeConstants;
 
 namespace Tonono2.Win32;
 
@@ -11,7 +12,7 @@ public static class ActiveProcess
         if (hwnd == IntPtr.Zero) return "";
 
         NativeMethods.GetWindowThreadProcessId(hwnd, out var pid);
-        var hProcess = NativeMethods.OpenProcess(NativeMethods.PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+        var hProcess = NativeMethods.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
         if (hProcess == IntPtr.Zero) return "";
 
         try

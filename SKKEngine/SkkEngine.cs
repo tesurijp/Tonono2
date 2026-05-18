@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Linq;
-using Tonono2.Win32;
 using System.Globalization;
+using System.Text;
+using Tonono2.Win32;
+using static Tonono2.Win32.NativeConstants;
 
 namespace Tonono2.SKKEngine;
 
@@ -102,8 +101,8 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
     {
         if (!isKeyDown) return false;
 
-        var ctrlPressed = (NativeMethods.GetKeyState(NativeMethods.VK_CONTROL) & 0x8000) != 0;
-        var shiftPressed = (NativeMethods.GetKeyState(NativeMethods.VK_SHIFT) & 0x8000) != 0;
+        var ctrlPressed = (NativeMethods.GetKeyState(VK_CONTROL) & 0x8000) != 0;
+        var shiftPressed = (NativeMethods.GetKeyState(VK_SHIFT) & 0x8000) != 0;
 
         if (ctrlPressed)
         {
@@ -627,7 +626,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
 
     private static char VkToChar(int vkCode, bool shift)
     {
-        if (vkCode == 0x47 && (NativeMethods.GetKeyState(NativeMethods.VK_CONTROL) & 0x8000) != 0)
+        if (vkCode == 0x47 && (NativeMethods.GetKeyState(VK_CONTROL) & 0x8000) != 0)
         {
             return '\0';
         }
@@ -635,11 +634,11 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         var keyState = new byte[256];
         NativeMethods.GetKeyboardState(keyState);
 
-        if (shift) keyState[NativeMethods.VK_SHIFT] = 0x80;
-        else keyState[NativeMethods.VK_SHIFT] = 0;
+        if (shift) keyState[VK_SHIFT] = 0x80;
+        else keyState[VK_SHIFT] = 0;
 
-        keyState[NativeMethods.VK_CONTROL] = 0;
-        keyState[NativeMethods.VK_MENU] = 0;
+        keyState[VK_CONTROL] = 0;
+        keyState[VK_MENU] = 0;
 
         var sbbuf = new char[10];
         var scanCode = NativeMethods.MapVirtualKey((uint)vkCode, 0);

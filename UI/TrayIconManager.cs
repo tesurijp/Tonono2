@@ -7,6 +7,7 @@ using Tonono2.Win32;
 using System.Drawing;
 using System.Reflection;
 using System.Diagnostics;
+using static Tonono2.Win32.NativeConstants;
 
 namespace Tonono2.UI;
 
@@ -34,19 +35,19 @@ public sealed class TrayIconManager : IDisposable
         nid.cbSize = Marshal.SizeOf(nid);
         nid.hWnd = _hWnd;
         nid.uID = _uID;
-        nid.uFlags = NativeMethods.NIF_MESSAGE | NativeMethods.NIF_ICON | NativeMethods.NIF_TIP;
-        nid.uCallbackMessage = NativeMethods.WM_TRAYICON;
+        nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
+        nid.uCallbackMessage = WM_TRAYICON;
         nid.hIcon = icon.Handle;
         nid.szTip = "Tonono SKK";
-        NativeMethods.Shell_NotifyIcon(NativeMethods.NIM_ADD, ref nid);
+        NativeMethods.Shell_NotifyIcon(NIM_ADD, ref nid);
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if (msg == NativeMethods.WM_TRAYICON)
+        if (msg == WM_TRAYICON)
         {
             var eventId = (int)lParam.ToInt64() & 0xFFFF;
-            if (eventId == NativeMethods.WM_RBUTTONUP)
+            if (eventId == WM_RBUTTONUP)
             {
                 ShowContextMenu();
             }
@@ -57,10 +58,10 @@ public sealed class TrayIconManager : IDisposable
     private void ShowContextMenu()
     {
         var hMenu = NativeMethods.CreatePopupMenu();
-        NativeMethods.AppendMenu(hMenu, (uint)NativeMethods.MF_STRING, 1001, "Information");
-        NativeMethods.AppendMenu(hMenu, (uint)NativeMethods.MF_STRING, 1003, "Open config.yaml");
-        NativeMethods.AppendMenu(hMenu, (uint)NativeMethods.MF_SEPARATOR, 0, "");
-        NativeMethods.AppendMenu(hMenu, (uint)NativeMethods.MF_STRING, 1002, "Exit");
+        NativeMethods.AppendMenu(hMenu, (uint)MF_STRING, 1001, "Information");
+        NativeMethods.AppendMenu(hMenu, (uint)MF_STRING, 1003, "Open config.yaml");
+        NativeMethods.AppendMenu(hMenu, (uint)MF_SEPARATOR, 0, "");
+        NativeMethods.AppendMenu(hMenu, (uint)MF_STRING, 1002, "Exit");
 
         NativeMethods.GetCursorPos(out var pt);
 
@@ -68,7 +69,7 @@ public sealed class TrayIconManager : IDisposable
 
         var selectedId = NativeMethods.TrackPopupMenu(
             hMenu,
-            (uint)(NativeMethods.TPM_LEFTALIGN | NativeMethods.TPM_RETURNCMD),
+            (uint)(TPM_LEFTALIGN | TPM_RETURNCMD),
             pt.X, pt.Y, 0, _hWnd, IntPtr.Zero);
 
         NativeMethods.DestroyMenu(hMenu);
@@ -117,7 +118,7 @@ public sealed class TrayIconManager : IDisposable
         {
             _infoWindow?.Close();
             var nid = new NativeMethods.NOTIFYICONDATA { cbSize = Marshal.SizeOf<NativeMethods.NOTIFYICONDATA>(), hWnd = _hWnd, uID = _uID };
-            NativeMethods.Shell_NotifyIcon(NativeMethods.NIM_DELETE, ref nid);
+            NativeMethods.Shell_NotifyIcon(NIM_DELETE, ref nid);
             icon.Dispose();
             _disposed = true;
         }
