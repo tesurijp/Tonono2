@@ -6,6 +6,7 @@ using Tonono2.SKKEngine;
 using Tonono2.Win32;
 using System.Drawing;
 using System.Reflection;
+using System.Diagnostics;
 
 namespace Tonono2.UI;
 
@@ -57,6 +58,7 @@ public sealed class TrayIconManager : IDisposable
     {
         var hMenu = NativeMethods.CreatePopupMenu();
         NativeMethods.AppendMenu(hMenu, (uint)NativeMethods.MF_STRING, 1001, "Information");
+        NativeMethods.AppendMenu(hMenu, (uint)NativeMethods.MF_STRING, 1003, "Open config.yaml");
         NativeMethods.AppendMenu(hMenu, (uint)NativeMethods.MF_SEPARATOR, 0, "");
         NativeMethods.AppendMenu(hMenu, (uint)NativeMethods.MF_STRING, 1002, "Exit");
 
@@ -76,9 +78,24 @@ public sealed class TrayIconManager : IDisposable
             case 1001:
                 ShowInfoWindow();
                 break;
+            case 1003:
+                OpenConfig();
+                break;
             case 1002:
                 Application.Current.Shutdown();
                 break;
+        }
+    }
+
+    private static void OpenConfig()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(AppConfig.ConfigPath) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            DebugLogger.Log($"Failed to open config.yaml: {ex.Message}");
         }
     }
 
