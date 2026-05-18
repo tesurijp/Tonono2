@@ -16,6 +16,9 @@
                     
                     <TextBlock Text="Loaded Dictionaries:" FontWeight="Bold"/>
                     <ListBox ItemsSource="{Binding DictionaryPaths}" Height="100" Margin="0,0,0,10"/>
+
+                    <TextBlock Text="Vi-Compatible Apps (Special ESC handling):" FontWeight="Bold"/>
+                    <ListBox ItemsSource="{Binding ViCompatibleApps}" Height="80" Margin="0,0,0,10"/>
                 </StackPanel>
             </TabItem>
             <TabItem Header="Romaji Table">

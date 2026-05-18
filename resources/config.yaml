@@ -1,6 +1,11 @@
 dictionaryPaths: 
   - ./skk-jisyo.l.gz
+  - ./skk-jisyo.jinmei.gz
 userDictionaryPath: ./user-jisyo.txt
+
+viCompatibleApps:
+  - vim.exe
+  - Code.exe
 
 romajiTable:
   vowel : aiueo

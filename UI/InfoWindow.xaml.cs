@@ -11,6 +11,7 @@ public class InfoViewModel(SkkController controller)
     public IEnumerable<KeyValuePair<string, string>> RomajiEntries => controller.Config.RomajiTable.OrderBy(kv => kv.Key);
     public IEnumerable<KeyValuePair<string, string>> ZenkakuEntries => controller.Config.ZenkakuTable.OrderBy(kv => kv.Key);
     public IEnumerable<string> DictionaryPaths => controller.Config.DictionaryPaths;
+    public IEnumerable<string> ViCompatibleApps => controller.Config.ViCompatibleApps;
 }
 
 public partial class InfoWindow : Window

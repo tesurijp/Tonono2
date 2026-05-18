@@ -14,13 +14,14 @@ public class AppConfig
     public Dictionary<string, string> ZenkakuTable { get; } = [];
     public List<string> DictionaryPaths { get; set; } = [];
     public string UserDictionaryPath { get; set; } = "";
+    public List<string> ViCompatibleApps { get; set; } = [];
     public static string ConfigPath => Path.Combine(AppContext.BaseDirectory, "config.yaml");
 }
 
 [YamlObject] public partial record class RomajiTable(string Vowel, Dictionary<string, string[]> Rows, Dictionary<string, string> Irregular);
 [YamlObject] public partial record class Standard(int Start, int End, int Offset);
 [YamlObject] public partial record class ZenkakuTable(Standard Standard, Dictionary<string, string> Overrides);
-[YamlObject] public partial record class ConfigYaml(string[] DictionaryPaths, string UserDictionaryPath, RomajiTable RomajiTable, ZenkakuTable ZenkakuTable);
+[YamlObject] public partial record class ConfigYaml(string[] DictionaryPaths, string UserDictionaryPath, RomajiTable RomajiTable, ZenkakuTable ZenkakuTable, string[]? ViCompatibleApps = null);
 
 public static class ConfigLoader
 {
@@ -33,6 +34,7 @@ public static class ConfigLoader
         LoadRomajiTable(yamlObj, appConfig);
         LoadZenkakuTable(yamlObj, appConfig);
         LoadDictionaryPath(yamlObj, appConfig);
+        appConfig.ViCompatibleApps = yamlObj.ViCompatibleApps?.ToList() ?? [];
 
         return appConfig;
     }

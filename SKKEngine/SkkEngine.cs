@@ -584,6 +584,12 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         ResetBuffers();
     }
 
+    public void CancelAndDisable()
+    {
+        ResetBuffers();
+        ChangeState(SkkState.Disabled);
+    }
+
     private void ResetBuffers()
     {
         compositionBuffer.Clear();

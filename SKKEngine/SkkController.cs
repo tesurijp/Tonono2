@@ -70,11 +70,38 @@ public sealed class SkkController : IDisposable
 
     private void OnKeyIntercepted(object? sender, KeyboardKeyEventArgs e)
     {
+        if (e.VirtualKeyCode == 0x1B && e.IsKeyDown && Engine.State != SkkState.Disabled && IsViCompatibleAppActive())
+        {
+            Engine.CancelAndDisable();
+            // e.Handled is false by default, so ESC is passed through
+            RequestUiUpdate();
+            return;
+        }
+
         if (Engine.ProcessKey(e.VirtualKeyCode, e.IsKeyDown))
         {
             e.Handled = true;
             RequestUiUpdate();
         }
+    }
+
+    private bool IsViCompatibleAppActive()
+    {
+        var activePath = ActiveProcess.GetActiveProcessPath();
+        if (string.IsNullOrEmpty(activePath)) return false;
+
+        // Normalize path separators to backslashes for consistency
+        var normalizedActivePath = activePath.Replace('/', '\\');
+
+        foreach (var app in Config.ViCompatibleApps)
+        {
+            var normalizedApp = app.Replace('/', '\\');
+            if (normalizedActivePath.EndsWith(normalizedApp, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
     }
     public void Dispose()
     {
