@@ -9,7 +9,7 @@ namespace Tonono2;
 public partial class App : Application
 {
     private SkkController? controller;
-    private TrayIconManager? trayIcon;
+    private SystemMenu? trayIcon;
     private TononoUI? ui;
 
     public App()
@@ -21,9 +21,9 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        controller = new SkkController();
-        ui = new TononoUI(controller);
-        trayIcon = new TrayIconManager(ui , controller);
+        controller = new();
+        ui = new(controller);
+        trayIcon = new(ui, controller);
     }
 
     protected override void OnExit(ExitEventArgs e)

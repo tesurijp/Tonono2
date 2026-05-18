@@ -37,6 +37,6 @@ internal static class NativeConstants
     internal const int WM_LBUTTONDBLCLK = 0x0203;
     internal const int TPM_LEFTALIGN = 0x0000;
     internal const int TPM_RETURNCMD = 0x0100;
-    internal const int MF_STRING = 0x00000000;
-    internal const int MF_SEPARATOR = 0x00000800;
+    internal const uint MF_STRING = 0x00000000;
+    internal const uint MF_SEPARATOR = 0x00000800;
 }

@@ -101,8 +101,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
     {
         if (!isKeyDown) return false;
 
-        var ctrlPressed = (NativeMethods.GetKeyState(VK_CONTROL) & 0x8000) != 0;
-        var shiftPressed = (NativeMethods.GetKeyState(VK_SHIFT) & 0x8000) != 0;
+        var (ctrlPressed , shiftPressed) = Keyboard.GetMetaKeyState();
 
         if (ctrlPressed)
         {
@@ -135,7 +134,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
             if (vkCode == 0x08 || vkCode == 0x0D || vkCode == 0x1B || (vkCode >= 0x21 && vkCode <= 0x28))
                 return false; // Pass through: BS, Enter, Esc, Arrows, Home/End, PgUp/Dn
 
-            var cz = VkToChar(vkCode, shiftPressed);
+            var cz = Keyboard.VkToChar(vkCode, shiftPressed);
             if (cz != '\0')
             {
                 if (zenkakuTable.TryGetValue(cz.ToString(), out var zenkaku))
@@ -267,7 +266,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
             return false;
         }
 
-        var c = VkToChar(vkCode, shiftPressed);
+        var c =Keyboard.VkToChar(vkCode, shiftPressed);
         if (c != '\0')
         {
             if (candidateIndex >= 0)
@@ -622,43 +621,5 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         {
             OutputManager.SendString(text);
         }
-    }
-
-    private static char VkToChar(int vkCode, bool shift)
-    {
-        if (vkCode == 0x47 && (NativeMethods.GetKeyState(VK_CONTROL) & 0x8000) != 0)
-        {
-            return '\0';
-        }
-
-        var keyState = new byte[256];
-        NativeMethods.GetKeyboardState(keyState);
-
-        if (shift) keyState[VK_SHIFT] = 0x80;
-        else keyState[VK_SHIFT] = 0;
-
-        keyState[VK_CONTROL] = 0;
-        keyState[VK_MENU] = 0;
-
-        var sbbuf = new char[10];
-        var scanCode = NativeMethods.MapVirtualKey((uint)vkCode, 0);
-        var result = NativeMethods.ToUnicode((uint)vkCode, scanCode, keyState, sbbuf, 5, 0);
-
-        if (result > 0)
-        {
-            var str = new string(sbbuf);
-            if (string.IsNullOrEmpty(str))
-            {
-                return '\0';
-            }
-            var c = str[0];
-            if (char.IsLetter(c))
-            {
-                return shift ? char.ToUpper(c, CultureInfo.CurrentCulture) : char.ToLower(c, CultureInfo.CurrentCulture);
-            }
-            return c;
-        }
-
-        return '\0';
     }
 }

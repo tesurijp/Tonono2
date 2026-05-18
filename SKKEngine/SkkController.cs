@@ -23,9 +23,9 @@ public sealed class SkkController : IDisposable
 
         var dic = new SkkDicManager(Config.DictionaryPaths, Config.UserDictionaryPath);
 
-        Engine = new SkkEngine(Config.RomajiTable, Config.ZenkakuTable, dic, RequestUiUpdate);
+        Engine = new (Config.RomajiTable, Config.ZenkakuTable, dic, RequestUiUpdate);
 
-        _hook = new KeyboardHook();
+        _hook = new ();
         _hook.KeyIntercepted += OnKeyIntercepted;
         _hook.Install();
 
