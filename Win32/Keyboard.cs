@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Runtime.InteropServices;
 using static Tonono2.Win32.NativeConstants;
 
@@ -16,6 +17,7 @@ public class KeyboardKeyEventArgs(int vkCode, bool isKeyDown) : EventArgs
 public sealed class KeyboardHook : IDisposable
 {
     private IntPtr hookId = IntPtr.Zero;
+    private NativeMethods.LowLevelKeyboardProc? hookProc;
 
     public event EventHandler<KeyboardKeyEventArgs>? KeyIntercepted;
 
@@ -23,35 +25,44 @@ public sealed class KeyboardHook : IDisposable
     {
         using var curProcess = Process.GetCurrentProcess();
         using var curModule = curProcess.MainModule;
-        hookId = NativeMethods.SetWindowsHookEx(WH_KEYBOARD_LL, HookCallback, NativeMethods.GetModuleHandle(curModule?.ModuleName), 0);
+        hookProc = HookCallback;
+        hookId = NativeMethods.SetWindowsHookEx(WH_KEYBOARD_LL, hookProc, NativeMethods.GetModuleHandle(curModule?.ModuleName), 0);
     }
 
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode >= 0)
+        try
         {
-            var msg = wParam.ToInt32();
-
-            var isKeyDown = msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN;
-            var isKeyUp = msg == WM_KEYUP || msg == WM_SYSKEYUP;
-
-            if (isKeyDown || isKeyUp)
+            if (nCode >= 0)
             {
-                var hook = Marshal.PtrToStructure<NativeMethods.KBDLLHOOKSTRUCT>(lParam);
+                var msg = wParam.ToInt32();
 
-                if ((hook.flags & NativeMethods.KbdLlFlags.LLKHF_INJECTED) == 0)
+                var isKeyDown = msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN;
+                var isKeyUp = msg == WM_KEYUP || msg == WM_SYSKEYUP;
+
+                if (isKeyDown || isKeyUp)
                 {
-                    var args = new KeyboardKeyEventArgs((int)hook.vkCode, isKeyDown);
+                    var hook = Marshal.PtrToStructure<NativeMethods.KBDLLHOOKSTRUCT>(lParam);
+
+                    if ((hook.flags & NativeMethods.KbdLlFlags.LLKHF_INJECTED) == 0)
+                    {
+                        var args = new KeyboardKeyEventArgs((int)hook.vkCode, isKeyDown);
                     KeyIntercepted?.Invoke(this, args);
 
-                    if (args.Handled)
-                    {
-                        return 1;
+                        if (args.Handled)
+                        {
+                            return 1;
+                        } 
                     }
                 }
             }
         }
-
+        catch (Exception ex)
+        {
+            var path = Path.Combine(AppContext.BaseDirectory, "exception.txt");
+            File.AppendAllText(path, $"{Environment.NewLine}{ex.GetType().ToString()}{Environment.NewLine}{ex.Message}");
+            File.AppendAllText(path, $"{Environment.NewLine}{ex.StackTrace}");
+        }
         return NativeMethods.CallNextHookEx(hookId, nCode, wParam, lParam);
     }
 
