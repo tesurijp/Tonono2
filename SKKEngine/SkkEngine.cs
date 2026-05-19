@@ -47,7 +47,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
     {
         kanaConverter.UpdateTable(config.RomajiTable);
         zenkakuTable = config.ZenkakuTable;
-        dictionary.Reload(config.DictionaryPaths);
+        Dictionary.Reload(config.DictionaryPaths);
         BufferChanged();
     }
 
@@ -301,6 +301,11 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
                     }
                     else if (okuriPrefix == null && compositionBuffer.Length > 0)
                     {
+                        if (romajiBuffer.Length == 1 && romajiBuffer[0] == 'n')
+                        {
+                            HandleKanaProduced("ん");
+                            romajiBuffer.Clear();
+                        }
                         okuriPrefix = char.ToLower(c, CultureInfo.CurrentCulture).ToString();
                         readingBeforeOkuri = compositionBuffer.ToString();
                     }
@@ -374,7 +379,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         if (vkCode == 0x58 && candidateIndex >= 0 && candidateIndex < candidates.Count)
         {
             var word = candidates[candidateIndex];
-            dictionary.RemoveWord(GetDictionaryKey(), word);
+            Dictionary.RemoveWord(GetDictionaryKey(), word);
             candidates.RemoveAt(candidateIndex);
             if (candidates.Count == 0) candidateIndex = -1;
             else candidateIndex %= candidates.Count;
@@ -429,7 +434,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
             romajiBuffer.Clear();
         }
         var key = GetDictionaryKey();
-        candidates = [ .. dictionary.GetCandidates(key) ];
+        candidates = [ .. Dictionary.GetCandidates(key) ];
         if (candidates.Count > 0)
         {
             candidateIndex = 0;
@@ -552,7 +557,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
 
     public void RegisterWordAndCommit(string reading, string word)
     {
-        dictionary.AddWord(reading, word);
+        Dictionary.AddWord(reading, word);
         CommitProducedText(word);
         ResetBuffers();
     }
@@ -563,7 +568,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         if (candidateIndex >= 0 && candidateIndex < candidates.Count)
         {
             committedText = candidates[candidateIndex];
-            dictionary.AddWord(GetDictionaryKey(), committedText);
+            Dictionary.AddWord(GetDictionaryKey(), committedText);
             if (okuriPrefix != null)
             {
                 var okuriKana = compositionBuffer.ToString()[readingBeforeOkuri.Length..];
