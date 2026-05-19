@@ -9,50 +9,52 @@ namespace Tonono2.SKKEngine;
 
 public class SkkDicManager
 {
-    private readonly Dictionary<string, List<string>> _mainDictionary = [];
-    private readonly Dictionary<string, List<string>> _userDictionary = [];
-    private readonly string _userDictionaryPath;
+    private readonly Dictionary<string, List<string>> mainDictionary = [];
+    private readonly Dictionary<string, List<string>> userDictionary = [];
+    private readonly string userDictionaryPath;
 
     public SkkDicManager(IEnumerable<string> mainDictPaths, string userDictPath)
     {
         Reload(mainDictPaths);
-        _userDictionaryPath = userDictPath;
-        LoadUserDictionary(_userDictionaryPath);
+        userDictionaryPath = userDictPath;
+        LoadUserDictionary(userDictionaryPath);
     }
-
     public void Reload(IEnumerable<string> mainDictPaths)
     {
-        _mainDictionary.Clear();
+        mainDictionary.Clear();
         foreach (var path in mainDictPaths)
         {
             LoadMainDictionary(path);
         }
     }
 
+    private static byte[] DicBuffer(string path)
+    {
+        using var fileStream = File.OpenRead(path);
+        using Stream inputStream = path.EndsWith(".gz", StringComparison.OrdinalIgnoreCase)
+            ? new GZipStream(fileStream, CompressionMode.Decompress)
+            : fileStream;
+
+        // Read into memory to handle encoding detection
+        using var memoryStream = new MemoryStream();
+        inputStream.CopyTo(memoryStream);
+        return memoryStream.ToArray();
+    }
+
     private void LoadMainDictionary(string path)
     {
         if (File.Exists(path))
         {
-
             try
             {
-                using var fileStream = File.OpenRead(path);
-                using Stream inputStream = path.EndsWith(".gz", StringComparison.OrdinalIgnoreCase)
-                    ? new GZipStream(fileStream, CompressionMode.Decompress)
-                    : fileStream;
-
-                // Read into memory to handle encoding detection
-                using var memoryStream = new MemoryStream();
-                inputStream.CopyTo(memoryStream);
-                var buffer = memoryStream.ToArray();
-
+                var buffer = DicBuffer(path);
                 var encoding = DetectEncoding(buffer);
                 using var reader = new StreamReader(new MemoryStream(buffer), encoding);
 
                 string? line;
                 while ((line = reader.ReadLine()) != null)
                 {
-                    ParseLine(line, _mainDictionary);
+                    ParseLine(line, mainDictionary);
                 }
             }
             catch (Exception ex)
@@ -91,7 +93,7 @@ public class SkkDicManager
         {
             foreach (var line in File.ReadLines(path, Encoding.UTF8))
             {
-                ParseLine(line, _userDictionary);
+                ParseLine(line, userDictionary);
             }
         }
     }
@@ -128,28 +130,28 @@ public class SkkDicManager
 
     public IEnumerable<string> GetCandidates(string reading)
     {
-        var cand1 = _userDictionary.TryGetValue(reading, out var val1) ? val1 : [];
-        var cand2 = _mainDictionary.TryGetValue(reading, out var val2) ? val2 : [];
+        var cand1 = userDictionary.TryGetValue(reading, out var val1) ? val1 : [];
+        var cand2 = mainDictionary.TryGetValue(reading, out var val2) ? val2 : [];
         return cand1.Union(cand2);
     }
 
     public void AddWord(string reading, string word)
     {
-        if (_userDictionary.TryGetValue(reading, out var candidates))
+        if (userDictionary.TryGetValue(reading, out var candidates))
         {
             candidates.Remove(word);
             candidates.Insert(0, word);
         }
         else
         {
-            _userDictionary[reading] = [word];
+            userDictionary[reading] = [word];
         }
         SaveUserDictionary();
     }
 
     public void RemoveWord(string reading, string word)
     {
-        if (_userDictionary.TryGetValue(reading, out var candidates))
+        if (userDictionary.TryGetValue(reading, out var candidates))
         {
             if (candidates.Remove(word))
             {
@@ -162,9 +164,9 @@ public class SkkDicManager
     {
         try
         {
-            DebugLogger.Log($"Saving user dictionary to: {_userDictionaryPath}");
-            var lines = _userDictionary.Select(kvp => $"{kvp.Key} /{string.Join("/", kvp.Value)}/").ToList();
-            File.WriteAllLines(_userDictionaryPath, lines, Encoding.UTF8);
+            DebugLogger.Log($"Saving user dictionary to: {userDictionaryPath}");
+            var lines = userDictionary.Select(kvp => $"{kvp.Key} /{string.Join("/", kvp.Value)}/").ToList();
+            File.WriteAllLines(userDictionaryPath, lines, Encoding.UTF8);
         }
         catch (Exception ex)
         {
