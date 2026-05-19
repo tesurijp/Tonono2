@@ -21,7 +21,7 @@ public class AppConfig
 [YamlObject] public partial record class RomajiTable(string Vowel, Dictionary<string, string[]> Rows, Dictionary<string, string> Irregular);
 [YamlObject] public partial record class Standard(int Start, int End, int Offset);
 [YamlObject] public partial record class ZenkakuTable(Standard Standard, Dictionary<string, string> Overrides);
-[YamlObject] public partial record class ConfigYaml(string[] DictionaryPaths, string UserDictionaryPath, RomajiTable RomajiTable, ZenkakuTable ZenkakuTable, string[]? ViCompatibleApps = null);
+[YamlObject] public partial record class ConfigYaml(string[] DictionaryPaths, string UserDictionaryPath, RomajiTable RomajiTable, ZenkakuTable ZenkakuTable, string[] ViCompatibleApps);
 
 public static class ConfigLoader
 {
@@ -34,7 +34,7 @@ public static class ConfigLoader
         LoadRomajiTable(yamlObj, appConfig);
         LoadZenkakuTable(yamlObj, appConfig);
         LoadDictionaryPath(yamlObj, appConfig);
-        appConfig.ViCompatibleApps = yamlObj.ViCompatibleApps?.ToList() ?? [];
+        LoadViCompatibleApps(yamlObj, appConfig);
 
         return appConfig;
     }
@@ -89,5 +89,10 @@ public static class ConfigLoader
                 appConfig.RomajiTable[entry.Key?.ToString() ?? ""] = entry.Value?.ToString() ?? "";
             }
         }
+    }
+
+    private static void LoadViCompatibleApps(ConfigYaml data, AppConfig appConfig)
+    {
+        appConfig.ViCompatibleApps = [.. data.ViCompatibleApps];
     }
 }
