@@ -69,8 +69,15 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
                 }
                 return result;
             }
-            var prefix = isAbbreviationMode ? " /" : (isConversionMode ? "▽" : "");
-            return prefix + compositionBuffer.ToString() + romajiBuffer.ToString();
+
+            if (completionIndex >= 0 && completionIndex < completions.Count)
+            {
+                var prefix = isAbbreviationMode ? " /" : "▽";
+                return prefix + completions[completionIndex] + romajiBuffer.ToString();
+            }
+
+            var prefixStr = isAbbreviationMode ? " /" : (isConversionMode ? "▽" : "");
+            return prefixStr + compositionBuffer.ToString() + romajiBuffer.ToString();
         }
     }
 
@@ -110,6 +117,24 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         if (ctrlPressed)
         {
             return HandleCtrlKey(vkCode);
+        }
+
+        // ESC: Ctrl+G と同様のキャンセル動作 (vi互換アプリ向けの透過送信は SkkController で処理済み)
+        if (vkCode == 0x1B)
+        {
+            if (compositionBuffer.Length > 0 || romajiBuffer.Length > 0 || candidateIndex != -1 || IsInRegistrationMode || isConversionMode)
+            {
+                if (IsInRegistrationMode)
+                {
+                    CancelRegistration();
+                }
+                else
+                {
+                    ResetBuffers();
+                }
+                return true;
+            }
+            return false;
         }
 
         if (State == SkkState.Disabled)
