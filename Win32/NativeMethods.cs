@@ -222,5 +222,11 @@ internal static partial class NativeMethods
         internal int X;
         internal int Y;
     }
+
+    [LibraryImport("user32.dll", EntryPoint ="GetWindowLongPtrW")]
+    internal static partial IntPtr GetWindowLongPtr(IntPtr hwnd, int index);
+
+    [LibraryImport("user32.dll", EntryPoint ="SetWindowLongPtrW")]
+    internal static partial IntPtr SetWindowLongPtr(IntPtr hwnd, int index, IntPtr newValue);
 }
 

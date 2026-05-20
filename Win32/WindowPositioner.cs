@@ -1,4 +1,6 @@
 using System;
+using System.Security.Principal;
+using System.Windows;
 using static Tonono2.Win32.NativeConstants;
 
 namespace Tonono2.Win32;
@@ -57,5 +59,13 @@ public static class WindowPositioner
         }
 
         return (double.NaN, double.NaN);
+    }
+    public static void SetNonActiveWindow(Window window)
+    {
+        var helper = new System.Windows.Interop.WindowInteropHelper(window);
+        var hwnd = helper.Handle;
+        var currentStyle = NativeMethods.GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+        var newStyle = new IntPtr(currentStyle | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW);
+        NativeMethods.SetWindowLongPtr(hwnd, GWL_EXSTYLE, newStyle);
     }
 }

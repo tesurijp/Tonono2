@@ -39,4 +39,8 @@ internal static class NativeConstants
     internal const int TPM_RETURNCMD = 0x0100;
     internal const uint MF_STRING = 0x00000000;
     internal const uint MF_SEPARATOR = 0x00000800;
+
+    internal const int GWL_EXSTYLE = -20;
+    internal const uint WS_EX_TOOLWINDOW = 0x00000080;
+    internal const uint WS_EX_NOACTIVATE = 0x08000000;
 }

@@ -68,4 +68,6 @@ public partial class TononoUI : Window
         Left = !double.IsNaN(posX) ? posX : Left;
         Top = !double.IsNaN(posY) ? posY : Top;
     }
+
+    private void Window_Loaded(object sender, RoutedEventArgs e) => WindowPositioner.SetNonActiveWindow(this);
 }
