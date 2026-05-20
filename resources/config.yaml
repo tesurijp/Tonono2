@@ -6,6 +6,8 @@ userDictionaryPath: ./user-jisyo.txt
 viCompatibleApps:
   - vim.exe
   - Code.exe
+  - devenv.exe
+  - obsidian.exe
 
 romajiTable:
   vowel : aiueo
