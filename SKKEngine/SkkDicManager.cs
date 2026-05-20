@@ -135,6 +135,28 @@ public class SkkDicManager
         return cand1.Union(cand2);
     }
 
+    public IEnumerable<string> GetCompletions(string prefix)
+    {
+        if (string.IsNullOrEmpty(prefix)) return [];
+
+        // SKK dictionary keys for entries with okuri end with a lowercase letter (e.g., "u", "k").
+        // However, alphabetical keys (for abbreviation mode) also end with lowercase letters.
+        // We only exclude entries that are clearly kana-based okuri entries.
+        bool IsOkuriEntry(string key) => 
+            key.Length > 1 && 
+            char.IsLower(key[^1]) && 
+            key.Any(c => c > 0x7F || !char.IsLower(c)); // Contains non-ASCII (kana) or non-lowercase (though usually keys are lower)
+
+        var userMatches = userDictionary.Keys
+            .Where(k => k.StartsWith(prefix, StringComparison.Ordinal) && !IsOkuriEntry(k))
+            .ToList();
+        var mainMatches = mainDictionary.Keys
+            .Where(k => k.StartsWith(prefix, StringComparison.Ordinal) && !IsOkuriEntry(k))
+            .ToList();
+
+        return userMatches.Union(mainMatches).OrderBy(k => k.Length).ThenBy(k => k, StringComparer.Ordinal);
+    }
+
     public void AddWord(string reading, string word)
     {
         if (userDictionary.TryGetValue(reading, out var candidates))

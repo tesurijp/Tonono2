@@ -31,6 +31,10 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
     private List<string> candidates = [];
     private int candidateIndex = -1;
 
+    private List<string> completions = [];
+    private int completionIndex = -1;
+    private string originalReadingBeforeCompletion = "";
+
     private readonly Action StateChanged = UpdateUI;
     private readonly Action BufferChanged = UpdateUI;
 
@@ -113,6 +117,45 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
             return false;
         }
 
+        // TAB 補完の処理
+        if (vkCode == 0x09 && !shiftPressed)
+        {
+            if ((isConversionMode || isAbbreviationMode) && candidateIndex == -1) // ▽または / モードで読み入力中
+            {
+                if (completionIndex == -1)
+                {
+                    // 補完開始
+                    originalReadingBeforeCompletion = compositionBuffer.ToString();
+                    completions = [ .. Dictionary.GetCompletions(originalReadingBeforeCompletion) ];
+                    if (completions.Count > 0)
+                    {
+                        completionIndex = 0;
+                    }
+                }
+                else
+                {
+                    // 次の候補へ
+                    completionIndex = (completionIndex + 1) % completions.Count;
+                }
+
+                BufferChanged();
+                return true;
+            }
+            // 補完中以外、または候補がない場合はパススルー
+            return false;
+        }
+
+        // 補完中かつ TAB/Space 以外のキーが押された場合は補完を破棄
+        if (completionIndex >= 0 && vkCode != 0x09 && vkCode != 0x20)
+        {
+            completionIndex = -1;
+            completions.Clear();
+            // compositionBuffer は originalReadingBeforeCompletion に戻さず、そのまま継続（仕様通り）
+            // ただし、Composition プロパティで表示を切り替えているので、明示的に書き戻す必要があるかもしれないが、
+            // 仕様では「補完候補を捨て、もともと入力されていた文字の続きへの入力とし」とある。
+            // 補完中は compositionBuffer 自体は書き換えず表示のみ変えていたので、何もしなくて良い。
+        }
+
         // Mode transitions
         if (vkCode == 0x4C && !shiftPressed && State != SkkState.Zenkaku) // l -> ASCII
         {
@@ -180,6 +223,18 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
 
         if (vkCode == 0x20 && !shiftPressed)
         {
+            // 補完確定からの漢字変換開始
+            if (completionIndex >= 0)
+            {
+                compositionBuffer.Clear();
+                compositionBuffer.Append(completions[completionIndex]);
+                completionIndex = -1;
+                completions.Clear();
+                StartConversion();
+                BufferChanged();
+                return true;
+            }
+
             if ((isConversionMode || isAbbreviationMode) && (compositionBuffer.Length > 0 || romajiBuffer.Length > 0))
             {
                 if (candidateIndex == -1)
@@ -601,6 +656,8 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         isAbbreviationMode = false;
         candidateIndex = -1;
         candidates.Clear();
+        completionIndex = -1;
+        completions.Clear();
         okuriPrefix = null;
         readingBeforeOkuri = "";
         BufferChanged();
