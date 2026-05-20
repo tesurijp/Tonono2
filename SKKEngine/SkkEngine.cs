@@ -182,14 +182,14 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         }
 
         // Mode transitions
-        if (vkCode == 0x4C && !shiftPressed && State != SkkState.Zenkaku) // l -> ASCII
+        if (vkCode == 0x4C && !shiftPressed && State != SkkState.Zenkaku && !isAbbreviationMode) // l -> ASCII
         {
             CommitAll();
             ChangeState(SkkState.Disabled);
             return true;
         }
 
-        if (vkCode == 0x4C && shiftPressed && State != SkkState.Zenkaku) // L -> Zenkaku
+        if (vkCode == 0x4C && shiftPressed && State != SkkState.Zenkaku && !isAbbreviationMode) // L -> Zenkaku
         {
             CommitAll();
             ChangeState(SkkState.Zenkaku);
