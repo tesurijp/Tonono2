@@ -120,7 +120,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         }
 
         // ESC: Ctrl+G と同様のキャンセル動作 (vi互換アプリ向けの透過送信は SkkController で処理済み)
-        if (vkCode == 0x1B)
+        if (vkCode == SkkKeyConstants.VkEscape)
         {
             if (compositionBuffer.Length > 0 || romajiBuffer.Length > 0 || candidateIndex != -1 || IsInRegistrationMode || isConversionMode)
             {
@@ -143,7 +143,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         }
 
         // TAB 補完の処理
-        if (vkCode == 0x09 && !shiftPressed)
+        if (vkCode == SkkKeyConstants.VkTab && !shiftPressed)
         {
             if ((isConversionMode || isAbbreviationMode) && candidateIndex == -1) // ▽または / モードで読み入力中
             {
@@ -171,7 +171,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         }
 
         // 補完中かつ TAB/Space 以外のキーが押された場合は補完を破棄
-        if (completionIndex >= 0 && vkCode != 0x09 && vkCode != 0x20)
+        if (completionIndex >= 0 && vkCode != SkkKeyConstants.VkTab && vkCode != SkkKeyConstants.VkSpace)
         {
             completionIndex = -1;
             completions.Clear();
@@ -182,14 +182,14 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         }
 
         // Mode transitions
-        if (vkCode == 0x4C && !shiftPressed && State != SkkState.Zenkaku && !isAbbreviationMode) // l -> ASCII
+        if (vkCode == SkkKeyConstants.VkL && !shiftPressed && State != SkkState.Zenkaku && !isAbbreviationMode) // l -> ASCII
         {
             CommitAll();
             ChangeState(SkkState.Disabled);
             return true;
         }
 
-        if (vkCode == 0x4C && shiftPressed && State != SkkState.Zenkaku && !isAbbreviationMode) // L -> Zenkaku
+        if (vkCode == SkkKeyConstants.VkL && shiftPressed && State != SkkState.Zenkaku && !isAbbreviationMode) // L -> Zenkaku
         {
             CommitAll();
             ChangeState(SkkState.Zenkaku);
@@ -199,7 +199,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         // Direct Full-width Alphanumeric input
         if (State == SkkState.Zenkaku)
         {
-            if (vkCode == 0x08 || vkCode == 0x0D || vkCode == 0x1B || (vkCode >= 0x21 && vkCode <= 0x28))
+            if (vkCode == SkkKeyConstants.VkBack || vkCode == SkkKeyConstants.VkReturn || vkCode == SkkKeyConstants.VkEscape || (vkCode >= 0x21 && vkCode <= 0x28))
                 return false; // Pass through: BS, Enter, Esc, Arrows, Home/End, PgUp/Dn
 
             var cz = Keyboard.VkToChar(vkCode, shiftPressed);
@@ -218,7 +218,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
             return false;
         }
 
-        if (vkCode == 0x0D && !shiftPressed)
+        if (vkCode == SkkKeyConstants.VkReturn && !shiftPressed)
         {
             if (IsInRegistrationMode && compositionBuffer.Length == 0 && romajiBuffer.Length == 0 && candidateIndex == -1)
             {
@@ -246,7 +246,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
             }
         }
 
-        if (vkCode == 0x20 && !shiftPressed)
+        if (vkCode == SkkKeyConstants.VkSpace && !shiftPressed)
         {
             // 補完確定からの漢字変換開始
             if (completionIndex >= 0)
@@ -307,7 +307,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
             }
         }
 
-        if (vkCode == 0x08)
+        if (vkCode == SkkKeyConstants.VkBack)
         {
             if (candidateIndex >= 0)
             {
@@ -409,7 +409,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
     private bool HandleCtrlKey(int vkCode)
     {
         // 常に許可
-        if (vkCode == 0x4A) // Ctrl+J
+        if (vkCode == SkkKeyConstants.VkJ) // Ctrl+J
         {
             if (State == SkkState.Disabled)
             {
@@ -442,9 +442,9 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         }
 
         // Ctrl+N / Ctrl+P: 変換中のみ
-        if ((vkCode == 0x4E || vkCode == 0x50) && candidateIndex >= 0 && candidates.Count > 0)
+        if ((vkCode == SkkKeyConstants.VkN || vkCode == SkkKeyConstants.VkP) && candidateIndex >= 0 && candidates.Count > 0)
         {
-            if (vkCode == 0x4E) candidateIndex++; // Ctrl+N
+            if (vkCode == SkkKeyConstants.VkN) candidateIndex++; // Ctrl+N
             else candidateIndex = (candidateIndex - 1 + candidates.Count) % candidates.Count; // Ctrl+P
 
             if (candidateIndex >= candidates.Count)
@@ -456,7 +456,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         }
 
         // Ctrl+X: 漢字変換（候補選択）中のみ
-        if (vkCode == 0x58 && candidateIndex >= 0 && candidateIndex < candidates.Count)
+        if (vkCode == SkkKeyConstants.VkX && candidateIndex >= 0 && candidateIndex < candidates.Count)
         {
             var word = candidates[candidateIndex];
             Dictionary.RemoveWord(GetDictionaryKey(), word);
