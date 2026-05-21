@@ -4,9 +4,11 @@ using System.Globalization;
 using System.Text;
 using Tonono2.Win32;
 using static Tonono2.Win32.NativeConstants;
+using Tonono2.SKKEngine.States;
 
 namespace Tonono2.SKKEngine;
 
+public record class SkkKeyCommand(int VkCode, bool Shift, bool Control, char? Ch);
 public enum SkkState
 {
     Disabled,
@@ -16,20 +18,30 @@ public enum SkkState
     Hankaku
 }
 
-public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string, string> zenkakuTable, SkkDicManager dictionary)
+public class SkkEngine
 {
     public SkkContext Context { get; } = new();
 
     public SkkState State => Context.State;
-    private StringBuilder romajiBuffer => Context.RomajiBuffer;
-    private StringBuilder compositionBuffer => Context.CompositionBuffer;
+    internal StringBuilder RomajiBuffer => Context.RomajiBuffer;
+    internal StringBuilder CompositionBuffer => Context.CompositionBuffer;
 
-    private readonly KanaConverter kanaConverter = new(romajiTable);
-    private readonly DictionaryRegistrar registrar = new(dictionary);
+    internal readonly KanaConverter kanaConverter;
+    private readonly DictionaryRegistrar registrar;
+    internal Dictionary<string, string> zenkakuTable;
 
-    public SkkDicManager Dictionary => dictionary;
+    public SkkDicManager Dictionary { get; }
 
-    public string CurrentInput => romajiBuffer.ToString();
+    public SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string, string> zenkakuTable, SkkDicManager dictionary)
+    {
+        this.kanaConverter = new KanaConverter(romajiTable);
+        this.zenkakuTable = zenkakuTable;
+        this.Dictionary = dictionary;
+        this.registrar = new DictionaryRegistrar(dictionary);
+        Context.EditorState = new DisabledState();
+    }
+
+    public string CurrentInput => RomajiBuffer.ToString();
     public int RecursionDepth => registrar.RecursionDepth;
     public bool IsInRegistrationMode => registrar.IsInRegistrationMode;
 
@@ -48,6 +60,11 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
 
     public string CandidateList => Context.CandidateList;
 
+    public void Initialize()
+    {
+        Context.EditorState = new DisabledState();
+    }
+
     public bool ProcessKey(int vkCode, bool isKeyDown)
     {
         if (!isKeyDown)
@@ -56,379 +73,13 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         }
 
         var (ctrlPressed, shiftPressed) = Keyboard.GetMetaKeyState();
+        var ch = Keyboard.VkToChar(vkCode, shiftPressed);
+        var command = new SkkKeyCommand(vkCode, shiftPressed, ctrlPressed, ch == '\0' ? null : ch);
 
-        if (ctrlPressed)
-        {
-            return HandleCtrlKey(vkCode);
-        }
-
-        // ESC: Ctrl+G と同様のキャンセル動作 (vi互換アプリ向けの透過送信は SkkController で処理済み)
-        if (vkCode == SkkKeyConstants.VkEscape)
-        {
-            if (compositionBuffer.Length > 0 || romajiBuffer.Length > 0 || Context.CandidateIndex != -1 || IsInRegistrationMode || Context.IsConversionMode)
-            {
-                if (IsInRegistrationMode)
-                {
-                    CancelRegistration();
-                }
-                else
-                {
-                    ResetBuffers();
-                }
-                return true;
-            }
-            return false;
-        }
-
-        if (Context.State == SkkState.Disabled)
-        {
-            return false;
-        }
-
-        // TAB 補完の処理
-        if (vkCode == SkkKeyConstants.VkTab && !shiftPressed)
-        {
-            if ((Context.IsConversionMode || Context.IsAbbreviationMode) && Context.CandidateIndex == -1) // ▽または / モードで読み入力中
-            {
-                if (Context.CompletionIndex == -1)
-                {
-                    // 補完開始
-                    Context.OriginalReadingBeforeCompletion = compositionBuffer.ToString();
-                    Context.Completions = [ .. Dictionary.GetCompletions(Context.OriginalReadingBeforeCompletion) ];
-                    if (Context.Completions.Count > 0)
-                    {
-                        Context.CompletionIndex = 0;
-                    }
-                }
-                else
-                {
-                    // 次の候補へ
-                    Context.CompletionIndex = (Context.CompletionIndex + 1) % Context.Completions.Count;
-                }
-
-                Context.NotifyBufferChanged();
-                return true;
-            }
-            // 補完中以外、または候補がない場合はパススルー
-            return false;
-        }
-
-        // 補完中かつ TAB/Space 以外のキーが押された場合は補完を破棄
-        if (Context.CompletionIndex >= 0 && vkCode != SkkKeyConstants.VkTab && vkCode != SkkKeyConstants.VkSpace)
-        {
-            Context.CompletionIndex = -1;
-            Context.Completions.Clear();
-            // compositionBuffer は originalReadingBeforeCompletion に戻さず、そのまま継続（仕様通り）
-            // ただし、Composition プロパティで表示を切り替えているので、明示的に書き戻す必要があるかもしれないが、
-            // 仕様では「補完候補を捨て、もともと入力されていた文字の続きへの入力とし」とある。
-            // 補完中は compositionBuffer 自体は書き換えず表示のみ変えていたので、何もしなくて良い。
-        }
-
-        // Mode transitions
-        if (vkCode == SkkKeyConstants.VkL && !shiftPressed && Context.State != SkkState.Zenkaku && !Context.IsAbbreviationMode) // l -> ASCII
-        {
-            CommitAll();
-            ChangeState(SkkState.Disabled);
-            return true;
-        }
-
-        if (vkCode == SkkKeyConstants.VkL && shiftPressed && Context.State != SkkState.Zenkaku && !Context.IsAbbreviationMode) // L -> Zenkaku
-        {
-            CommitAll();
-            ChangeState(SkkState.Zenkaku);
-            return true;
-        }
-
-        // Direct Full-width Alphanumeric input
-        if (Context.State == SkkState.Zenkaku)
-        {
-            if (vkCode == SkkKeyConstants.VkBack || vkCode == SkkKeyConstants.VkReturn || vkCode == SkkKeyConstants.VkEscape || (vkCode >= 0x21 && vkCode <= 0x28))
-            {
-                return false; // Pass through: BS, Enter, Esc, Arrows, Home/End, PgUp/Dn
-            }
-
-            var cz = Keyboard.VkToChar(vkCode, shiftPressed);
-            if (cz != '\0')
-            {
-                if (zenkakuTable.TryGetValue(cz.ToString(), out var zenkaku))
-                {
-                    CommitProducedText(zenkaku);
-                }
-                else
-                {
-                    CommitProducedText(cz.ToString());
-                }
-                return true;
-            }
-            return false;
-        }
-
-        if (vkCode == SkkKeyConstants.VkReturn && !shiftPressed)
-        {
-            if (IsInRegistrationMode && compositionBuffer.Length == 0 && romajiBuffer.Length == 0 && Context.CandidateIndex == -1)
-            {
-                FinishRegistration();
-                return true;
-            }
-            if (compositionBuffer.Length > 0 || romajiBuffer.Length > 0 || Context.CandidateIndex != -1)
-            {
-                CommitAll();
-                return true;
-            }
-            return false;
-        }
-
-        if (Context.CandidateIndex >= 4 && vkCode >= 0x31 && vkCode <= 0x37)
-        {
-            var selection = vkCode - 0x31;
-            var pageStart = (Context.CandidateIndex / 7) * 7;
-            var targetIdx = pageStart + selection;
-            if (targetIdx < Context.Candidates.Count)
-            {
-                Context.CandidateIndex = targetIdx;
-                CommitAll();
-                return true;
-            }
-        }
-
-        if (vkCode == SkkKeyConstants.VkSpace && !shiftPressed)
-        {
-            // 補完確定からの漢字変換開始
-            if (Context.CompletionIndex >= 0)
-            {
-                compositionBuffer.Clear();
-                compositionBuffer.Append(Context.Completions[Context.CompletionIndex]);
-                Context.CompletionIndex = -1;
-                Context.Completions.Clear();
-                StartConversion();
-                Context.NotifyBufferChanged();
-                return true;
-            }
-
-            if ((Context.IsConversionMode || Context.IsAbbreviationMode) && (compositionBuffer.Length > 0 || romajiBuffer.Length > 0))
-            {
-                if (Context.CandidateIndex == -1)
-                {
-                    StartConversion();
-                }
-                else
-                {
-                    Context.CandidateIndex++;
-                    if (Context.CandidateIndex >= Context.Candidates.Count)
-                    {
-                        StartRegistration(GetDictionaryKey());
-                    }
-                }
-                Context.NotifyBufferChanged();
-                return true;
-            }
-        }
-
-        if (vkCode == 0x51)
-        {
-            if (Context.CandidateIndex >= 0)
-            {
-                CommitAll();
-                return true;
-            }
-            if (compositionBuffer.Length > 0 || romajiBuffer.Length > 0)
-            {
-                FlipAndCommit();
-            }
-            else
-            {
-                ToggleHiraganaKatakana();
-            }
-            return true;
-        }
-
-        if (vkCode == 0xBF && !shiftPressed)
-        {
-            if (!Context.IsConversionMode && !Context.IsAbbreviationMode && compositionBuffer.Length == 0 && Context.State != SkkState.Zenkaku)
-            {
-                Context.IsAbbreviationMode = true;
-                Context.NotifyBufferChanged();
-                return true;
-            }
-        }
-
-        if (vkCode == SkkKeyConstants.VkBack)
-        {
-            if (Context.CandidateIndex >= 0)
-            {
-                Context.CandidateIndex = -1;
-                Context.NotifyBufferChanged();
-                return true;
-            }
-            if (romajiBuffer.Length > 0)
-            {
-                romajiBuffer.Remove(romajiBuffer.Length - 1, 1);
-                Context.NotifyBufferChanged();
-                return true;
-            }
-            if (compositionBuffer.Length > 0)
-            {
-                compositionBuffer.Remove(compositionBuffer.Length - 1, 1);
-                if (compositionBuffer.Length == 0)
-                {
-                    Context.IsConversionMode = false;
-                    Context.IsAbbreviationMode = false;
-                    Context.OkuriPrefix = null;
-                }
-                else if (Context.OkuriPrefix != null && compositionBuffer.Length < Context.ReadingBeforeOkuri.Length)
-                {
-                    Context.OkuriPrefix = null;
-                }
-                Context.NotifyBufferChanged();
-                return true;
-            }
-            if (IsInRegistrationMode)
-            {
-                registrar.RemoveLastBuffer();
-                SyncRegistrationState();
-                Context.NotifyBufferChanged();
-                return true;
-            }
-            return false;
-        }
-
-        var c =Keyboard.VkToChar(vkCode, shiftPressed);
-        if (c != '\0')
-        {
-            if (Context.CandidateIndex >= 0)
-            {
-                CommitAll();
-            }
-            if (Context.IsAbbreviationMode)
-            {
-                compositionBuffer.Append(c);
-                Context.NotifyBufferChanged();
-                return true;
-            }
-
-            var isSymbol = !char.IsLetter(c) && !char.IsDigit(c);
-            var canMatch = kanaConverter.ToKana(c.ToString()) != string.Empty || kanaConverter.IsPotentialPrefix(c.ToString());
-            if (isSymbol && !canMatch)
-            {
-                CommitAll();
-                CommitProducedText(c.ToString());
-                return true;
-            }
-
-            if (c != ' ')
-            {
-                if (char.IsUpper(c) && char.IsLetter(c))
-                {
-                    if (!Context.IsConversionMode)
-                    {
-                        Context.IsConversionMode = true;
-                        Context.OkuriPrefix = null;
-                        Context.ReadingBeforeOkuri = "";
-                    }
-                    else if (Context.OkuriPrefix == null && compositionBuffer.Length > 0)
-                    {
-                        if (romajiBuffer.Length == 1 && romajiBuffer[0] == 'n')
-                        {
-                            HandleKanaProduced("ん");
-                            romajiBuffer.Clear();
-                        }
-                        Context.OkuriPrefix = char.ToLower(c, CultureInfo.CurrentCulture).ToString();
-                        Context.ReadingBeforeOkuri = compositionBuffer.ToString();
-                    }
-                }
-
-                romajiBuffer.Append(char.ToLower(c, CultureInfo.CurrentCulture));
-                TryConvertRomaji();
-                Context.NotifyBufferChanged();
-                return true;
-            }
-            else
-            {
-                CommitAll();
-                CommitProducedText(c.ToString());
-                return true;
-            }
-        }
-        return false;
+        return Context.EditorState?.ProcessKey(this, command) ?? false;
     }
 
-    private bool HandleCtrlKey(int vkCode)
-    {
-        // 常に許可
-        if (vkCode == SkkKeyConstants.VkJ) // Ctrl+J
-        {
-            if (Context.State == SkkState.Disabled)
-            {
-                ChangeState(SkkState.Hiragana);
-            }
-            else if (Context.State == SkkState.Zenkaku)
-            {
-                CommitAll();
-                ChangeState(SkkState.Hiragana);
-            }
-            else
-            {
-                CommitAll();
-            }
-            return true;
-        }
-
-        bool hasActiveComposition = compositionBuffer.Length > 0 || romajiBuffer.Length > 0 || Context.CandidateIndex != -1 || IsInRegistrationMode;
-
-        // Ctrl+G: 入力・変換中ならキャンセル
-        if (vkCode == 0x47 && hasActiveComposition)
-        {
-            if (IsInRegistrationMode)
-            {
-                CancelRegistration();
-                return true;
-            }
-            ResetBuffers();
-            return true;
-        }
-
-        // Ctrl+N / Ctrl+P: 変換中のみ
-        if ((vkCode == SkkKeyConstants.VkN || vkCode == SkkKeyConstants.VkP) && Context.CandidateIndex >= 0 && Context.Candidates.Count > 0)
-        {
-            if (vkCode == SkkKeyConstants.VkN)
-            {
-                Context.CandidateIndex++; // Ctrl+N
-            }
-            else
-            {
-                Context.CandidateIndex = (Context.CandidateIndex - 1 + Context.Candidates.Count) % Context.Candidates.Count; // Ctrl+P
-            }
-
-            if (Context.CandidateIndex >= Context.Candidates.Count)
-            {
-                StartRegistration(GetDictionaryKey());
-            }
-            Context.NotifyBufferChanged();
-            return true;
-        }
-
-        // Ctrl+X: 漢字変換（候補選択）中のみ
-        if (vkCode == SkkKeyConstants.VkX && Context.CandidateIndex >= 0 && Context.CandidateIndex < Context.Candidates.Count)
-        {
-            var word = Context.Candidates[Context.CandidateIndex];
-            Dictionary.RemoveWord(GetDictionaryKey(), word);
-            Context.Candidates.RemoveAt(Context.CandidateIndex);
-            if (Context.Candidates.Count == 0)
-            {
-                Context.CandidateIndex = -1;
-            }
-            else
-            {
-                Context.CandidateIndex %= Context.Candidates.Count;
-            }
-            Context.NotifyBufferChanged();
-            return true;
-        }
-
-        return false;
-    }
-
-    private void StartRegistration(string reading)
+    internal void StartRegistration(string reading)
     {
         registrar.Start(reading, Context.State);
         ResetBuffers();
@@ -436,7 +87,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         SyncRegistrationState();
     }
 
-    private void CancelRegistration()
+    internal void CancelRegistration()
     {
         var prevState = registrar.Cancel();
         if (prevState.HasValue)
@@ -448,7 +99,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         }
     }
 
-    private void FinishRegistration()
+    internal void FinishRegistration()
     {
         var result = registrar.Finish();
         if (result.HasValue)
@@ -471,6 +122,16 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         Context.NotifyBufferChanged();
     }
 
+    internal void HandleRegistrationBackspace()
+    {
+        if (IsInRegistrationMode)
+        {
+            registrar.RemoveLastBuffer();
+            SyncRegistrationState();
+            Context.NotifyBufferChanged();
+        }
+    }
+
     private void SyncRegistrationState()
     {
         Context.RecursionDepth = registrar.RecursionDepth;
@@ -479,18 +140,19 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         Context.RegistrationWord = registrar.RegistrationWord;
     }
 
-    private void StartConversion()
+    internal void StartConversion()
     {
-        if (romajiBuffer.ToString() == "n")
+        if (RomajiBuffer.ToString() == "n")
         {
             HandleKanaProduced("ん");
-            romajiBuffer.Clear();
+            RomajiBuffer.Clear();
         }
         var key = GetDictionaryKey();
         Context.Candidates = [ .. Dictionary.GetCandidates(key) ];
         if (Context.Candidates.Count > 0)
         {
             Context.CandidateIndex = 0;
+            ChangeState(Context.State); // Transitions to ConversionState
         }
         else
         {
@@ -499,19 +161,19 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         }
     }
 
-    private string GetDictionaryKey() => Context.OkuriPrefix != null ? Context.ReadingBeforeOkuri + Context.OkuriPrefix : compositionBuffer.ToString();
+    internal string GetDictionaryKey() => Context.OkuriPrefix != null ? Context.ReadingBeforeOkuri + Context.OkuriPrefix : CompositionBuffer.ToString();
 
-    private void TryConvertRomaji()
+    internal void TryConvertRomaji()
     {
-        while (romajiBuffer.Length > 0)
+        while (RomajiBuffer.Length > 0)
         {
-            var romaji = romajiBuffer.ToString();
+            var romaji = RomajiBuffer.ToString();
 
             var kana = kanaConverter.ToKana(romaji);
             if (!string.IsNullOrEmpty(kana))
             {
                 HandleKanaProduced(kana);
-                romajiBuffer.Clear();
+                RomajiBuffer.Clear();
                 if (Context.IsConversionMode && Context.OkuriPrefix != null && Context.CandidateIndex == -1)
                 {
                     StartConversion();
@@ -526,13 +188,13 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
                 if (!isVowel)
                 {
                     HandleKanaProduced("ん");
-                    romajiBuffer.Remove(0, 1);
+                    RomajiBuffer.Remove(0, 1);
                     continue;
                 }
                 else if (next == 'n')
                 {
                     HandleKanaProduced("ん");
-                    romajiBuffer.Remove(0, 2);
+                    RomajiBuffer.Remove(0, 2);
                     continue;
                 }
             }
@@ -540,7 +202,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
             if (romaji.Length >= 2 && romaji[0] == romaji[1] && romaji[0] != 'n' && char.IsLetter(romaji[0]))
             {
                 HandleKanaProduced("っ");
-                romajiBuffer.Remove(0, 1);
+                RomajiBuffer.Remove(0, 1);
                 if (Context.IsConversionMode && Context.OkuriPrefix != null && Context.CandidateIndex == -1)
                 {
                     StartConversion();
@@ -554,14 +216,14 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
             }
             else
             {
-                DebugLogger.Log($"No match in romaji table for: {romajiBuffer}. Flushing: {romajiBuffer[0]}");
-                HandleKanaProduced(romajiBuffer[0].ToString());
-                romajiBuffer.Remove(0, 1);
+                DebugLogger.Log($"No match in romaji table for: {RomajiBuffer}. Flushing: {RomajiBuffer[0]}");
+                HandleKanaProduced(RomajiBuffer[0].ToString());
+                RomajiBuffer.Remove(0, 1);
             }
         }
     }
 
-    private void HandleKanaProduced(string kana)
+    internal void HandleKanaProduced(string kana)
     {
         if (Context.State == SkkState.Katakana)
         {
@@ -570,7 +232,8 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
 
         if (Context.IsConversionMode)
         {
-            compositionBuffer.Append(kana);
+            CompositionBuffer.Append(kana);
+            ChangeState(Context.State); // Ensure we are in CompositionState
         }
         else
         {
@@ -578,9 +241,9 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         }
     }
 
-    private void FlipAndCommit()
+    internal void FlipAndCommit()
     {
-        var text = compositionBuffer.ToString();
+        var text = CompositionBuffer.ToString();
         if (Context.State == SkkState.Hiragana)
         {
             text = KanaConverter.HiraToKatakana(text);
@@ -593,7 +256,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         ResetBuffers();
     }
 
-    private void ToggleHiraganaKatakana()
+    internal void ToggleHiraganaKatakana()
     {
         if (Context.State == SkkState.Hiragana)
         {
@@ -612,7 +275,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         ResetBuffers();
     }
 
-    public void CommitAll()
+    internal void CommitAll()
     {
         string? committedText;
         if (Context.CandidateIndex >= 0 && Context.CandidateIndex < Context.Candidates.Count)
@@ -621,16 +284,16 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
             Dictionary.AddWord(GetDictionaryKey(), committedText);
             if (Context.OkuriPrefix != null)
             {
-                var bufferStr = compositionBuffer.ToString();
+                var bufferStr = CompositionBuffer.ToString();
                 var start = Math.Min(Context.ReadingBeforeOkuri.Length, bufferStr.Length);
                 var okuriKana = bufferStr[start..];
                 committedText += okuriKana;
-                committedText += romajiBuffer.ToString();
+                committedText += RomajiBuffer.ToString();
             }
         }
         else
         {
-            committedText = compositionBuffer.ToString() + romajiBuffer.ToString();
+            committedText = CompositionBuffer.ToString() + RomajiBuffer.ToString();
         }
 
         if (!string.IsNullOrEmpty(committedText))
@@ -646,7 +309,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         ChangeState(SkkState.Disabled);
     }
 
-    private void ResetBuffers()
+    internal void ResetBuffers()
     {
         Context.OkuriPrefix = null;
         Context.ReadingBeforeOkuri = "";
@@ -656,20 +319,41 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         Context.Candidates.Clear();
         Context.CompletionIndex = -1;
         Context.Completions.Clear();
-        compositionBuffer.Clear();
-        romajiBuffer.Clear();
+        CompositionBuffer.Clear();
+        RomajiBuffer.Clear();
         Context.NotifyBufferChanged();
+        ChangeState(Context.State);
     }
 
-    private void ChangeState(SkkState newState)
+    internal void ChangeState(SkkState newState)
     {
-        if (Context.State != newState)
+        Context.State = newState;
+        if (IsInRegistrationMode)
         {
-            Context.State = newState;
+            Context.EditorState = new RegistrationState();
+        }
+        else if (Context.CandidateIndex >= 0)
+        {
+            Context.EditorState = new ConversionState();
+        }
+        else if (Context.IsConversionMode || Context.IsAbbreviationMode || CompositionBuffer.Length > 0 || RomajiBuffer.Length > 0)
+        {
+            Context.EditorState = new CompositionState();
+        }
+        else
+        {
+            Context.EditorState = newState switch
+            {
+                SkkState.Disabled => new DisabledState(),
+                SkkState.Hiragana => new IdleState(),
+                SkkState.Katakana => new IdleState(),
+                SkkState.Zenkaku => new ZenkakuState(),
+                _ => Context.EditorState
+            };
         }
     }
 
-    private void CommitProducedText(string text)
+    internal void CommitProducedText(string text)
     {
         if (IsInRegistrationMode)
         {
@@ -683,4 +367,3 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         }
     }
 }
-

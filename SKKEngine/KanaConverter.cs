@@ -11,7 +11,7 @@ public class KanaConverter(Dictionary<string, string> romajiTable)
 
     public void UpdateTable(Dictionary<string, string> romajiTable) => RomajiToKana = romajiTable;
 
-    public bool IsPotentialPrefix(string romaji) => !string.IsNullOrEmpty(romaji) && RomajiToKana.Keys.Any(k => k.StartsWith(romaji, StringComparison.CurrentCulture));
+    public bool IsPotentialPrefix(string romaji) => !string.IsNullOrEmpty(romaji) && RomajiToKana.Keys.Any(k => k.StartsWith(romaji, StringComparison.Ordinal));
 
     public string ToKana(string romaji) => RomajiToKana.TryGetValue(romaji, out var hiragana) ? hiragana : string.Empty;
 

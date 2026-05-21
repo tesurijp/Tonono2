@@ -8,6 +8,19 @@ namespace Tonono2.SKKEngine;
 
 public class SkkContext : INotifyPropertyChanged
 {
+    public ISkkEditorState EditorState
+    {
+        get => field;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+            }
+        }
+    } = null!;
+
     public SkkState State
     {
         get => field;

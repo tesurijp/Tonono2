@@ -148,10 +148,10 @@ public class SkkDicManager
             key.Any(c => c > 0x7F || !char.IsLower(c)); // Contains non-ASCII (kana) or non-lowercase (though usually keys are lower)
 
         var userMatches = userDictionary.Keys
-            .Where(k => k.StartsWith(prefix, StringComparison.Ordinal) && !IsOkuriEntry(k))
+            .Where(k => k.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && !IsOkuriEntry(k))
             .ToList();
         var mainMatches = mainDictionary.Keys
-            .Where(k => k.StartsWith(prefix, StringComparison.Ordinal) && !IsOkuriEntry(k))
+            .Where(k => k.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && !IsOkuriEntry(k))
             .ToList();
 
         return userMatches.Union(mainMatches).OrderBy(k => k.Length).ThenBy(k => k, StringComparer.Ordinal);
