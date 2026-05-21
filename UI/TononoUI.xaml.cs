@@ -6,68 +6,36 @@ using Tonono2.Win32;
 
 namespace Tonono2.UI;
 
-public class TononoViewModel(SkkEngine engine) : INotifyPropertyChanged
-{
-    public string StatusText => $"[{GetStateDisplay()}]{(engine.RecursionDepth > 0 ? $":{engine.RecursionDepth}" : "")}";
-    public string InputText => engine.Composition;
-    public string CandidateListText => engine.CandidateList;
-    public bool IsInRegistrationMode => engine.IsInRegistrationMode;
-    public string RegistrationReading => engine.RegistrationReading;
-    public string RegistrationWord => engine.RegistrationWord;
-
-    public bool IsVisible => engine.IsInRegistrationMode || !string.IsNullOrEmpty(engine.Composition);
-
-    private string GetStateDisplay() => engine.State switch
-    {
-        SkkState.Hiragana => "あ",
-        SkkState.Katakana => "ア",
-        SkkState.Zenkaku => "全",
-        _ => "？"
-    };
-
-    public void Update()
-    {
-        OnPropertyChanged(nameof(StatusText));
-        OnPropertyChanged(nameof(InputText));
-        OnPropertyChanged(nameof(CandidateListText));
-        OnPropertyChanged(nameof(IsInRegistrationMode));
-        OnPropertyChanged(nameof(RegistrationReading));
-        OnPropertyChanged(nameof(RegistrationWord));
-        OnPropertyChanged(nameof(IsVisible));
-    }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-    protected virtual void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new(propertyName));
-}
-
 public partial class TononoUI : Window
 {
-    private readonly TononoViewModel _viewModel;
+    private readonly SkkContext _context;
 
     public TononoUI(SkkController controller)
     {
         InitializeComponent();
-        _viewModel = new(controller.Engine);
-        DataContext = _viewModel;
+        _context = controller.Engine.Context;
+        DataContext = _context;
 
-        controller.RequestUiUpdate = () => Dispatcher.Invoke(UpdateUI);
-        UpdateUI();
+        Loaded += (_, _) => WindowPositioner.SetNonActiveWindow(this);
+        IsVisibleChanged += (_, e) => _ = e.NewValue is true ? UpdatePosition() : false;
     }
 
-    private void UpdateUI()
+    private bool UpdatePosition()
     {
-        _viewModel.Update();
-        UpdatePosition();
+        Dispatcher.InvokeAsync(() =>
+        {
+            var source = PresentationSource.FromVisual(this);
+            var m = source?.CompositionTarget?.TransformToDevice ?? Matrix.Identity;
+            var (posX, posY) = WindowPositioner.GetTargetPosition(m.M11, m.M22, ActualWidth, ActualHeight);
+            if (!double.IsNaN(posX))
+            {
+                Left = posX;
+            }
+            if (!double.IsNaN(posY))
+            {
+                Top = posY;
+            }
+        });
+        return true;
     }
-
-    private void UpdatePosition()
-    {
-        var source = PresentationSource.FromVisual(this);
-        var m = source?.CompositionTarget?.TransformToDevice ?? Matrix.Identity;
-        var (posX, posY) = WindowPositioner.GetTargetPosition(m.M11, m.M22, ActualWidth, ActualHeight);
-        Left = !double.IsNaN(posX) ? posX : Left;
-        Top = !double.IsNaN(posY) ? posY : Top;
-    }
-
-    private void Window_Loaded(object sender, RoutedEventArgs e) => WindowPositioner.SetNonActiveWindow(this);
 }

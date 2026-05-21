@@ -15,15 +15,13 @@ public sealed class SkkController : IDisposable
     public SkkEngine Engine { get; private set; } = null!;
     public AppConfig Config { get; private set; } = new();
 
-    public Action RequestUiUpdate { get; set; } = () => { };
-
     public SkkController()
     {
         LoadConfig();
 
         var dic = new SkkDicManager(Config.DictionaryPaths, Config.UserDictionaryPath);
 
-        Engine = new (Config.RomajiTable, Config.ZenkakuTable, dic, RequestUiUpdate);
+        Engine = new (Config.RomajiTable, Config.ZenkakuTable, dic);
 
         _hook = new ();
         _hook.KeyIntercepted += OnKeyIntercepted;
@@ -74,14 +72,12 @@ public sealed class SkkController : IDisposable
         {
             Engine.CancelAndDisable();
             // e.Handled is false by default, so ESC is passed through
-            RequestUiUpdate();
             return;
         }
 
         if (Engine.ProcessKey(e.VirtualKeyCode, e.IsKeyDown))
         {
             e.Handled = true;
-            RequestUiUpdate();
         }
     }
 
