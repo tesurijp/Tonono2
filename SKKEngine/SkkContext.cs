@@ -167,6 +167,8 @@ public class SkkContext : INotifyPropertyChanged
     public bool ListConversion => CandidateIndex >= 4;
     public static int ListPageSize => 7;
 
+    public int PageStart => (CandidateIndex / ListPageSize) * ListPageSize;
+
     public string CandidateList
     {
         get
@@ -182,12 +184,10 @@ public class SkkContext : INotifyPropertyChanged
                     {
                         break;
                     }
-                    var label = (i + 1).ToString(System.Globalization.CultureInfo.CurrentCulture);
-                    var mark = (idx == CandidateIndex) ? "*" : " ";
-                    sb.Append(label);
-                    sb.Append(':');
-                    sb.Append(Candidates[idx]);
+                    var labels = "ASDFJKL";
+                    var mark = (idx == CandidateIndex) ? $"[{labels[i]}] : " : $" {labels[i]}  : ";
                     sb.Append(mark);
+                    sb.Append(Candidates[idx]);
                     sb.Append(' ');
                 }
                 return sb.ToString();

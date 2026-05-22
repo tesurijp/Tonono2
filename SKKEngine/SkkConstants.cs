@@ -12,8 +12,13 @@ public static class SkkConstants
     public const int VkRight = 0x27;
     public const int VkDown = 0x28;
 
+    public const int VkA = 0x41;
+    public const int VkS = 0x53;
+    public const int VkD = 0x44;
+    public const int VkF = 0x46;
     public const int VkG = 0x47;
     public const int VkJ = 0x4A;
+    public const int VkK = 0x4B;
     public const int VkL = 0x4C;
     public const int VkN = 0x4E;
     public const int VkP = 0x50;

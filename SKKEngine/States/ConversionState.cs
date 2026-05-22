@@ -32,10 +32,10 @@ public class ConversionState : StateBase
                 }
         }
 
-        if (context.ListConversion && vkCode >= 0x31 && vkCode <= 0x37)
+        if (context.ListConversion)
         {
-            int targetIdx = GetNumericSelectionIndex(context, vkCode);
-            if (targetIdx < context.Candidates.Count)
+            int targetIdx = GetSelectionIndex(context, vkCode);
+            if (targetIdx >= 0 && targetIdx < context.Candidates.Count)
             {
                 return SelectCandidateDirectly(engine, context, targetIdx);
             }
@@ -43,7 +43,7 @@ public class ConversionState : StateBase
 
         return (vkCode, command.Shift) switch
         {
-            (SkkConstants.VkSpace, false) => NextCandidate(engine, context),
+            (SkkConstants.VkSpace, false) => NextPage(engine, context),
             (SkkConstants.VkBack, _) => CancelComposition(engine, context),
             (SkkConstants.VkReturn, _) or (SkkConstants.VkQ, _) => CommitAll(engine),
             _ when command.Ch is { } c => char.IsControl(c) ? CommitAll(engine, false) : CommitAndProcessKeyInNextState(engine, vkCode),
@@ -64,12 +64,22 @@ public class ConversionState : StateBase
         return true;
     }
 
-    private static int GetNumericSelectionIndex(SkkContext context, int vkCode)
+    private static int GetSelectionIndex(SkkContext context, int vkCode)
     {
-        const int startNumberCode = 0x31;
-        var selection = vkCode - startNumberCode;
-        var pageStart = (context.CandidateIndex / 7) * 7;
-        var targetIdx = pageStart + selection;
+        var selection = vkCode switch
+        {
+            SkkConstants.VkA => 0,
+            SkkConstants.VkS => 1,
+            SkkConstants.VkD => 2,
+            SkkConstants.VkF => 3,
+            SkkConstants.VkJ => 4,
+            SkkConstants.VkK => 5,
+            SkkConstants.VkL => 6,
+            _ => -1
+        };
+        if (selection == -1) return -1;
+
+        var targetIdx = context.PageStart + selection;
         return targetIdx;
     }
 
@@ -96,15 +106,25 @@ public class ConversionState : StateBase
         return true;
     }
 
-    private static bool NextCandidate(SkkEngine engine, SkkContext context)
+    private static bool NextCandidate(SkkEngine engine, SkkContext context, int? newindex = null)
     {
-        context.CandidateIndex++;
+        context.CandidateIndex = newindex ?? context.CandidateIndex + 1;
 
         if (context.CandidateIndex >= context.Candidates.Count)
         {
             engine.StartRegistration(engine.GetDictionaryKey());
         }
         return true;
+    }
+
+    private static bool NextPage(SkkEngine engine, SkkContext context)
+    {
+        int? idx = null;
+        if (context.ListConversion)
+        {
+            idx = context.PageStart + SkkContext.ListPageSize;
+        }
+        return NextCandidate(engine, context, idx);
     }
 
     private static bool BackCandidate(SkkEngine engine, SkkContext context)
