@@ -1,142 +1,129 @@
 namespace Tonono2.SKKEngine.States;
 
-public static class ConversionState
+public class ConversionState : StateBase
 {
     public static bool ProcessKey(SkkEngine engine, SkkKeyCommand command)
     {
         var context = engine.Context;
         var vkCode = command.VkCode;
-        var shiftPressed = command.Shift;
-        var ctrlPressed = command.Control;
 
-        // Navigation keys: Pass through
-        if (vkCode >= 0x21 && vkCode <= 0x28)
+        if (IsNavigationKey(vkCode))
         {
             return false;
         }
 
-        // ESC: Cancellation
-        if (vkCode == SkkKeyConstants.VkEscape)
+        switch (vkCode, command.Control, command.Shift)
         {
-            engine.ResetBuffers();
-            return true;
+            case (SkkKeyConstants.VkEscape, _, _):
+            {
+                return ResetBuffers(engine);
+            }
+            case (_, true, _):
+            {
+                return vkCode switch
+                {
+                    SkkKeyConstants.VkJ => CommitAll(engine),
+                    0x47 => ResetBuffers(engine),
+                    SkkKeyConstants.VkN or SkkKeyConstants.VkP => SelectCandidate(engine, context, vkCode == SkkKeyConstants.VkN),
+                    SkkKeyConstants.VkX when context.CandidateIndex >= 0 && context.CandidateIndex < context.Candidates.Count => RemoveWord(engine, context),
+                    _ => false
+                };
+            }
         }
 
-        // Ctrl keys
-        if (ctrlPressed)
-        {
-            if (vkCode == SkkKeyConstants.VkJ) // Ctrl+J
-            {
-                engine.CommitAll();
-                return true;
-            }
-            if (vkCode == 0x47) // Ctrl+G: Cancel
-            {
-                engine.ResetBuffers();
-                return true;
-            }
-
-            // Ctrl+N / Ctrl+P: Select candidate
-            if (vkCode == SkkKeyConstants.VkN || vkCode == SkkKeyConstants.VkP)
-            {
-                if (vkCode == SkkKeyConstants.VkN)
-                {
-                    context.CandidateIndex++;
-                }
-                else
-                {
-                    context.CandidateIndex = (context.CandidateIndex - 1 + context.Candidates.Count) % context.Candidates.Count;
-                }
-
-                if (context.CandidateIndex >= context.Candidates.Count)
-                {
-                    engine.StartRegistration(engine.GetDictionaryKey());
-                }
-                context.NotifyBufferChanged();
-                return true;
-            }
-
-            // Ctrl+X: Remove word
-            if (vkCode == SkkKeyConstants.VkX && context.CandidateIndex >= 0 && context.CandidateIndex < context.Candidates.Count)
-            {
-                var word = context.Candidates[context.CandidateIndex];
-                engine.Dictionary.RemoveWord(engine.GetDictionaryKey(), word);
-                context.Candidates.RemoveAt(context.CandidateIndex);
-                if (context.Candidates.Count == 0)
-                {
-                    context.CandidateIndex = -1;
-                    engine.ChangeState(engine.State); // Back to CompositionState or IdleState
-                }
-                else
-                {
-                    context.CandidateIndex %= context.Candidates.Count;
-                }
-                context.NotifyBufferChanged();
-                return true;
-            }
-
-            return false;
-        }
-
-        // Numeric selection (1-7) when page is displayed
         if (context.CandidateIndex >= 4 && vkCode >= 0x31 && vkCode <= 0x37)
         {
-            var selection = vkCode - 0x31;
-            var pageStart = (context.CandidateIndex / 7) * 7;
-            var targetIdx = pageStart + selection;
+            int targetIdx = GetNumericSelectionIndex(context, vkCode);
             if (targetIdx < context.Candidates.Count)
             {
-                context.CandidateIndex = targetIdx;
-                engine.CommitAll();
-                return true;
+                return SelectCandidateDirectly(engine, context, targetIdx);
             }
         }
 
-        // Space -> Next candidate
-        if (vkCode == SkkKeyConstants.VkSpace && !shiftPressed)
+        return (vkCode, command.Shift) switch
         {
-            context.CandidateIndex++;
-            if (context.CandidateIndex >= context.Candidates.Count)
-            {
-                engine.StartRegistration(engine.GetDictionaryKey());
-            }
-            context.NotifyBufferChanged();
-            return true;
-        }
+            (SkkKeyConstants.VkSpace, false) => NextCandidate(engine, context),
+            (SkkKeyConstants.VkBack, _) => BackToComposition(engine, context),
+            (SkkKeyConstants.VkReturn, _) or (SkkKeyConstants.VkQ, _) => CommitAll(engine),
+            _ when command.Ch is { } c => char.IsControl(c) ? CommitAll(engine, false) : CommitAndProcessKeyInNextState(engine, vkCode),
+            _ => false
+        };
+    }
 
-        // Backspace -> Back to CompositionState
-        if (vkCode == SkkKeyConstants.VkBack)
+    private static bool CommitAndProcessKeyInNextState(SkkEngine engine, int vkCode)
+    {
+        CommitAll(engine);
+        // Process the key in the new state (usually IdleState)
+        return engine.ProcessKey(vkCode, true);
+    }
+
+    private static bool BackToComposition(SkkEngine engine, SkkContext context)
+    {
+        context.CandidateIndex = -1;
+        engine.ChangeState(engine.State); // Transitions back to CompositionState
+        context.NotifyBufferChanged();
+        return true;
+    }
+
+    private static bool NextCandidate(SkkEngine engine, SkkContext context)
+    {
+        context.CandidateIndex++;
+        if (context.CandidateIndex >= context.Candidates.Count)
+        {
+            engine.StartRegistration(engine.GetDictionaryKey());
+        }
+        context.NotifyBufferChanged();
+        return true;
+    }
+
+    private static int GetNumericSelectionIndex(SkkContext context, int vkCode)
+    {
+        var selection = vkCode - 0x31;
+        var pageStart = (context.CandidateIndex / 7) * 7;
+        var targetIdx = pageStart + selection;
+        return targetIdx;
+    }
+
+    private static bool SelectCandidateDirectly(SkkEngine engine, SkkContext context, int targetIdx)
+    {
+        context.CandidateIndex = targetIdx;
+        return CommitAll(engine);
+    }
+
+    private static bool RemoveWord(SkkEngine engine, SkkContext context)
+    {
+        var word = context.Candidates[context.CandidateIndex];
+        engine.Dictionary.RemoveWord(engine.GetDictionaryKey(), word);
+        context.Candidates.RemoveAt(context.CandidateIndex);
+        if (context.Candidates.Count == 0)
         {
             context.CandidateIndex = -1;
-            engine.ChangeState(engine.State); // Transitions back to CompositionState
-            context.NotifyBufferChanged();
-            return true;
+            engine.ChangeState(engine.State); // Back to CompositionState or IdleState
         }
-
-        // Return or Q -> Commit selection
-        if (vkCode == SkkKeyConstants.VkReturn || vkCode == SkkKeyConstants.VkQ)
+        else
         {
-            engine.CommitAll();
-            return true;
+            context.CandidateIndex %= context.Candidates.Count;
         }
+        context.NotifyBufferChanged();
+        return true;
+    }
 
-        // Char input -> Commit selection and process char in next state
-        if (command.Ch.HasValue)
+    private static bool SelectCandidate(SkkEngine engine, SkkContext context, bool forward)
+    {
+        if (forward)
         {
-            char c = command.Ch.Value;
-
-            // If it's a control character (like TAB), commit and let it pass through
-            if (char.IsControl(c))
-            {
-                engine.CommitAll();
-                return false;
-            }
-
-            engine.CommitAll();
-            // Process the key in the new state (usually IdleState)
-            return engine.ProcessKey(vkCode, true);
+            context.CandidateIndex++;
+        }
+        else
+        {
+            context.CandidateIndex = (context.CandidateIndex - 1 + context.Candidates.Count) % context.Candidates.Count;
         }
 
-        return false;
+        if (context.CandidateIndex >= context.Candidates.Count)
+        {
+            engine.StartRegistration(engine.GetDictionaryKey());
+        }
+        context.NotifyBufferChanged();
+        return true;
     }
 }
