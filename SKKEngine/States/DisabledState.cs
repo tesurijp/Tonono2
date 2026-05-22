@@ -4,11 +4,11 @@ public class DisabledState : StateBase
 {
     public static bool ProcessKey(SkkEngine engine, SkkKeyCommand command)
     {
-        if (command.Control && command.VkCode == SkkKeyConstants.VkJ)
+        if (command.Control && command.VkCode == SkkConstants.VkJ)
         {
-            return SwitchState(engine, SkkState.Hiragana, false);
+            engine.ResetBuffers();
+            return SwitchState(engine, SkkState.Hiragana);
         }
-
         return false;
     }
 }

@@ -15,7 +15,7 @@ public class CompositionState : StateBase
 
         switch (vkCode, command.Control, command.Shift)
         {
-            case (SkkKeyConstants.VkEscape, _, _):
+            case (SkkConstants.VkEscape, _, _):
             {
                 return ResetBuffers(engine);
             }
@@ -23,30 +23,30 @@ public class CompositionState : StateBase
             {
                 return HandleCommonCtrlKeys(engine, context, vkCode);
             }
-            case (SkkKeyConstants.VkQ, false, _):
+            case (SkkConstants.VkQ, false, _):
             {
                 return HandleQKey(engine, context);
             }
-            case (SkkKeyConstants.VkSlash, false, false) when !context.IsConversionMode && !context.IsAbbreviationMode && context.CompositionBuffer.Length == 0:
+            case (SkkConstants.VkSlash, false, false) when !context.IsConversionMode && !context.IsAbbreviationMode && context.CompositionBuffer.Length == 0:
             {
                 return EnterAbbreviationMode(engine, context);
             }
-            case (SkkKeyConstants.VkTab, false, false) when context.CandidateIndex == -1:
+            case (SkkConstants.VkTab, false, false) when context.CandidateIndex == -1:
             {
                 return HandleTabCompletion(engine, context);
             }
         }
 
-        if (context.CompletionIndex >= 0 && vkCode != SkkKeyConstants.VkTab && vkCode != SkkKeyConstants.VkSpace)
+        if (context.CompletionIndex >= 0 && vkCode != SkkConstants.VkTab && vkCode != SkkConstants.VkSpace)
         {
             ClearCompletion(context);
         }
 
         return (vkCode, command.Shift) switch
         {
-            (SkkKeyConstants.VkSpace, false) when context.CompletionIndex >= 0 => AcceptCompletionAndStartConversion(engine, context),
-            (SkkKeyConstants.VkSpace, false) when IsBufferActive(context) => StartConversion(engine, context),
-            (SkkKeyConstants.VkBack, _) => BackspaceRomaji(context) || BackspaceComposition(engine, context),
+            (SkkConstants.VkSpace, false) when context.CompletionIndex >= 0 => AcceptCompletionAndStartConversion(engine, context),
+            (SkkConstants.VkSpace, false) when IsBufferActive(context) => StartConversion(engine),
+            (SkkConstants.VkBack, _) => BackspaceRomaji(context) || BackspaceComposition(engine, context),
             _ => command.Ch.HasValue && HandleCharInput(engine, context, command.Ch.Value)
         };
     }
@@ -67,7 +67,6 @@ public class CompositionState : StateBase
             context.CompletionIndex = (context.CompletionIndex + 1) % context.Completions.Count;
         }
 
-        context.NotifyBufferChanged();
         return true;
     }
 
@@ -83,6 +82,6 @@ public class CompositionState : StateBase
         context.CompositionBuffer.Append(context.Completions[context.CompletionIndex]);
         context.CompletionIndex = -1;
         context.Completions.Clear();
-        return StartConversion(engine, context);
+        return StartConversion(engine);
     }
 }

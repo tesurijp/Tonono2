@@ -14,30 +14,30 @@ public class RegistrationState : StateBase
 
         switch (vkCode, command.Control, command.Shift)
         {
-            case (SkkKeyConstants.VkEscape, _, _):
+            case (SkkConstants.VkEscape, _, _):
             {
                 engine.CancelRegistration();
                 return true;
             }
             case (_, true, _):
             {
-                if (vkCode == SkkKeyConstants.VkJ)
+                if (vkCode == SkkConstants.VkJ)
                 {
                     return CommitAll(engine);
                 }
-                if (vkCode == 0x47)
+                if (vkCode == SkkConstants.VkG)
                 {
                     engine.CancelRegistration();
                     return true;
                 }
                 return false;
             }
-            case (SkkKeyConstants.VkReturn, false, false) when context.CompositionBuffer.Length == 0 && context.RomajiBuffer.Length == 0 && context.CandidateIndex == -1:
+            case (SkkConstants.VkReturn, false, false) when context.CompositionBuffer.Length == 0 && context.RomajiBuffer.Length == 0 && context.CandidateIndex == -1:
             {
                 engine.FinishRegistration();
                 return true;
             }
-            case (SkkKeyConstants.VkBack, false, _) when context.RomajiBuffer.Length == 0 && context.CompositionBuffer.Length == 0:
+            case (SkkConstants.VkBack, false, _) when context.RomajiBuffer.Length == 0 && context.CompositionBuffer.Length == 0:
             {
                 engine.HandleRegistrationBackspace();
                 return true;

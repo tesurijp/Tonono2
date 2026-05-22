@@ -142,7 +142,7 @@ public class SkkDicManager
         // SKK dictionary keys for entries with okuri end with a lowercase letter (e.g., "u", "k").
         // However, alphabetical keys (for abbreviation mode) also end with lowercase letters.
         // We only exclude entries that are clearly kana-based okuri entries.
-        bool IsOkuriEntry(string key) => 
+        static bool IsOkuriEntry(string key) => 
             key.Length > 1 && 
             char.IsLower(key[^1]) && 
             key.Any(c => c > 0x7F || !char.IsLower(c)); // Contains non-ASCII (kana) or non-lowercase (though usually keys are lower)

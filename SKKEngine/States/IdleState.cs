@@ -1,5 +1,3 @@
-using System.Globalization;
-
 namespace Tonono2.SKKEngine.States;
 
 public class IdleState : StateBase
@@ -16,15 +14,15 @@ public class IdleState : StateBase
 
         return (vkCode, command.Control, command.Shift) switch
         {
-            (SkkKeyConstants.VkEscape, _, _) => TryResetBuffers(engine, context),
+            (SkkConstants.VkEscape, _, _) => TryResetBuffers(engine, context),
             (_, true, _) => HandleCommonCtrlKeys(engine, context, vkCode),
-            (SkkKeyConstants.VkL, false, false) when !context.IsAbbreviationMode => SwitchState(engine, SkkState.Disabled),
-            (SkkKeyConstants.VkL, false, true) when !context.IsAbbreviationMode => SwitchState(engine, SkkState.Zenkaku),
-            (SkkKeyConstants.VkQ, false, _) => HandleQKey(engine, context),
-            (SkkKeyConstants.VkSlash, false, false) when !context.IsConversionMode && !context.IsAbbreviationMode && context.CompositionBuffer.Length == 0 => EnterAbbreviationMode(engine, context),
-            (SkkKeyConstants.VkBack, false, _) => BackspaceRomaji(context) || BackspaceComposition(engine, context),
-            (SkkKeyConstants.VkReturn, false, false) when IsBufferActive(context) => CommitAll(engine),
-            (SkkKeyConstants.VkSpace, false, false) when (context.IsConversionMode || context.IsAbbreviationMode) && IsBufferActive(context) => StartConversion(engine, context),
+            (SkkConstants.VkL, false, false) when !context.IsAbbreviationMode => SwitchState(engine, SkkState.Disabled),
+            (SkkConstants.VkL, false, true) when !context.IsAbbreviationMode => SwitchState(engine, SkkState.Zenkaku),
+            (SkkConstants.VkQ, false, _) => HandleQKey(engine, context),
+            (SkkConstants.VkSlash, false, false) when !context.IsConversionMode && !context.IsAbbreviationMode && context.CompositionBuffer.Length == 0 => EnterAbbreviationMode(engine, context),
+            (SkkConstants.VkBack, false, _) => BackspaceRomaji(context) || BackspaceComposition(engine, context),
+            (SkkConstants.VkReturn, false, false) when IsBufferActive(context) => CommitAll(engine),
+            (SkkConstants.VkSpace, false, false) when (context.IsConversionMode || context.IsAbbreviationMode) && IsBufferActive(context) => StartConversion(engine),
             _ => command.Ch.HasValue && HandleCharInput(engine, context, command.Ch.Value)
         };
     }

@@ -7,7 +7,7 @@ namespace Tonono2.SKKEngine;
 
 public record class SkkKeyCommand(int VkCode, bool Shift, bool Control, char? Ch);
 
-public enum SkkState
+public enum SkkState : int
 {
     Disabled,
     Hiragana,
@@ -16,25 +16,17 @@ public enum SkkState
     Hankaku
 }
 
-public class SkkEngine
+public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string, string> zenkakuTable, SkkDicManager dictionary)
 {
     public SkkContext Context { get; } = new();
 
     public SkkState State => Context.State;
 
-    internal readonly KanaConverter kanaConverter;
-    private readonly DictionaryRegistrar registrar;
-    internal Dictionary<string, string> zenkakuTable;
+    internal readonly KanaConverter kanaConverter = new(romajiTable);
+    private readonly DictionaryRegistrar registrar = new(dictionary);
+    internal Dictionary<string, string> zenkakuTable = zenkakuTable;
 
-    public SkkDicManager Dictionary { get; }
-
-    public SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string, string> zenkakuTable, SkkDicManager dictionary)
-    {
-        this.kanaConverter = new KanaConverter(romajiTable);
-        this.zenkakuTable = zenkakuTable;
-        this.Dictionary = dictionary;
-        this.registrar = new DictionaryRegistrar(dictionary);
-    }
+    public SkkDicManager Dictionary { get; } = dictionary;
 
     public bool IsInRegistrationMode => registrar.IsInRegistrationMode;
 
@@ -43,7 +35,6 @@ public class SkkEngine
         kanaConverter.UpdateTable(config.RomajiTable);
         zenkakuTable = config.ZenkakuTable;
         Dictionary.Reload(config.DictionaryPaths);
-        Context.NotifyBufferChanged();
     }
 
     public bool ProcessKey(int vkCode, bool isKeyDown)
@@ -76,7 +67,6 @@ public class SkkEngine
             ChangeState(prevState.Value);
             ResetBuffers();
             SyncRegistrationState();
-            Context.NotifyBufferChanged();
         }
     }
 
@@ -100,7 +90,6 @@ public class SkkEngine
             ResetBuffers();
             SyncRegistrationState();
         }
-        Context.NotifyBufferChanged();
     }
 
     internal void HandleRegistrationBackspace()
@@ -109,7 +98,6 @@ public class SkkEngine
         {
             registrar.RemoveLastBuffer();
             SyncRegistrationState();
-            Context.NotifyBufferChanged();
         }
     }
 
@@ -197,8 +185,8 @@ public class SkkEngine
             }
             else
             {
-                DebugLogger.Log($"No match in romaji table for: {Context.RomajiBuffer}. Flushing: {Context.RomajiBuffer[0]}");
-                HandleKanaProduced(Context.RomajiBuffer[0].ToString());
+                DebugLogger.Log($"No match in romaji table for: {Context.RomajiBuffer}. Flushing: {Context.RomajiBuffer.First}");
+                HandleKanaProduced(Context.RomajiBuffer.First.ToString());
                 Context.RomajiBuffer.Remove(0, 1);
             }
         }
@@ -330,7 +318,6 @@ public class SkkEngine
         {
             registrar.AppendBuffer(text);
             SyncRegistrationState();
-            Context.NotifyBufferChanged();
         }
         else
         {

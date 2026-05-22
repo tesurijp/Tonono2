@@ -14,24 +14,25 @@ public class ConversionState : StateBase
 
         switch (vkCode, command.Control, command.Shift)
         {
-            case (SkkKeyConstants.VkEscape, _, _):
-            {
-                return ResetBuffers(engine);
-            }
-            case (_, true, _):
-            {
-                return vkCode switch
+            case (SkkConstants.VkEscape, _, _):
                 {
-                    SkkKeyConstants.VkJ => CommitAll(engine),
-                    0x47 => ResetBuffers(engine),
-                    SkkKeyConstants.VkN or SkkKeyConstants.VkP => SelectCandidate(engine, context, vkCode == SkkKeyConstants.VkN),
-                    SkkKeyConstants.VkX when context.CandidateIndex >= 0 && context.CandidateIndex < context.Candidates.Count => RemoveWord(engine, context),
-                    _ => false
-                };
-            }
+                    return CancelComposition(engine,context);
+                }
+            case (_, true, _):
+                {
+                    return vkCode switch
+                    {
+                        SkkConstants.VkJ => CommitAll(engine),
+                        SkkConstants.VkG => CancelComposition(engine,context),
+                        SkkConstants.VkN => NextCandidate(engine, context),
+                        SkkConstants.VkP => BackCandidate(engine, context),
+                        SkkConstants.VkX when context.CandidateIndex >= 0 && context.CandidateIndex < context.Candidates.Count => RemoveWord(engine, context),
+                        _ => false
+                    };
+                }
         }
 
-        if (context.CandidateIndex >= 4 && vkCode >= 0x31 && vkCode <= 0x37)
+        if (context.ListConversion && vkCode >= 0x31 && vkCode <= 0x37)
         {
             int targetIdx = GetNumericSelectionIndex(context, vkCode);
             if (targetIdx < context.Candidates.Count)
@@ -42,9 +43,9 @@ public class ConversionState : StateBase
 
         return (vkCode, command.Shift) switch
         {
-            (SkkKeyConstants.VkSpace, false) => NextCandidate(engine, context),
-            (SkkKeyConstants.VkBack, _) => BackToComposition(engine, context),
-            (SkkKeyConstants.VkReturn, _) or (SkkKeyConstants.VkQ, _) => CommitAll(engine),
+            (SkkConstants.VkSpace, false) => NextCandidate(engine, context),
+            (SkkConstants.VkBack, _) => CancelComposition(engine, context),
+            (SkkConstants.VkReturn, _) or (SkkConstants.VkQ, _) => CommitAll(engine),
             _ when command.Ch is { } c => char.IsControl(c) ? CommitAll(engine, false) : CommitAndProcessKeyInNextState(engine, vkCode),
             _ => false
         };
@@ -53,32 +54,20 @@ public class ConversionState : StateBase
     private static bool CommitAndProcessKeyInNextState(SkkEngine engine, int vkCode)
     {
         CommitAll(engine);
-        // Process the key in the new state (usually IdleState)
         return engine.ProcessKey(vkCode, true);
     }
 
-    private static bool BackToComposition(SkkEngine engine, SkkContext context)
+    private static bool CancelComposition(SkkEngine engine, SkkContext context)
     {
         context.CandidateIndex = -1;
-        engine.ChangeState(engine.State); // Transitions back to CompositionState
-        context.NotifyBufferChanged();
-        return true;
-    }
-
-    private static bool NextCandidate(SkkEngine engine, SkkContext context)
-    {
-        context.CandidateIndex++;
-        if (context.CandidateIndex >= context.Candidates.Count)
-        {
-            engine.StartRegistration(engine.GetDictionaryKey());
-        }
-        context.NotifyBufferChanged();
+        engine.ChangeState(engine.State);
         return true;
     }
 
     private static int GetNumericSelectionIndex(SkkContext context, int vkCode)
     {
-        var selection = vkCode - 0x31;
+        const int startNumberCode = 0x31;
+        var selection = vkCode - startNumberCode;
         var pageStart = (context.CandidateIndex / 7) * 7;
         var targetIdx = pageStart + selection;
         return targetIdx;
@@ -98,32 +87,33 @@ public class ConversionState : StateBase
         if (context.Candidates.Count == 0)
         {
             context.CandidateIndex = -1;
-            engine.ChangeState(engine.State); // Back to CompositionState or IdleState
+            engine.ChangeState(engine.State);
         }
         else
         {
             context.CandidateIndex %= context.Candidates.Count;
         }
-        context.NotifyBufferChanged();
         return true;
     }
 
-    private static bool SelectCandidate(SkkEngine engine, SkkContext context, bool forward)
+    private static bool NextCandidate(SkkEngine engine, SkkContext context)
     {
-        if (forward)
-        {
-            context.CandidateIndex++;
-        }
-        else
-        {
-            context.CandidateIndex = (context.CandidateIndex - 1 + context.Candidates.Count) % context.Candidates.Count;
-        }
+        context.CandidateIndex++;
 
         if (context.CandidateIndex >= context.Candidates.Count)
         {
             engine.StartRegistration(engine.GetDictionaryKey());
         }
-        context.NotifyBufferChanged();
+        return true;
+    }
+
+    private static bool BackCandidate(SkkEngine engine, SkkContext context)
+    {
+        context.CandidateIndex--;
+        if (context.CandidateIndex < 0)
+        {
+            engine.ChangeState(engine.State);
+        }
         return true;
     }
 }

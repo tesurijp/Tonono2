@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
+using Tonono2.SKKEngine;
 using static Tonono2.Win32.NativeConstants;
 
 namespace Tonono2.Win32;
@@ -57,7 +58,7 @@ public sealed class KeyboardHook : IDisposable
         catch (Exception ex)
         {
             var path = Path.Combine(AppContext.BaseDirectory, "exception.txt");
-            File.AppendAllText(path, $"{Environment.NewLine}{ex.GetType().ToString()}{Environment.NewLine}{ex.Message}");
+            File.AppendAllText(path, $"{Environment.NewLine}{ex.GetType()}{Environment.NewLine}{ex.Message}");
             File.AppendAllText(path, $"{Environment.NewLine}{ex.StackTrace}");
         }
         return NativeMethods.CallNextHookEx(hookId, nCode, wParam, lParam);
@@ -84,7 +85,7 @@ public static class Keyboard
 
     public static char VkToChar(int vkCode, bool shift)
     {
-        if (vkCode == 0x47 && (NativeMethods.GetKeyState(VK_CONTROL) & 0x8000) != 0)
+        if (vkCode == SkkConstants.VkG && (NativeMethods.GetKeyState(VK_CONTROL) & 0x8000) != 0)
         {
             return '\0';
         }

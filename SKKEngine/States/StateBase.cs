@@ -7,6 +7,7 @@ public abstract class StateBase
     protected static (SkkContext context, int vkCode, bool? result) PrepareProcessing(SkkEngine engine, SkkKeyCommand command) => 
         (engine.Context, command.VkCode, IsNavigationKey(command.VkCode) ? false : null);
 
+
     protected static bool ResetBuffers(SkkEngine engine)
     {
         engine.ResetBuffers();
@@ -23,7 +24,6 @@ public abstract class StateBase
     {
         context.RomajiBuffer.Append(char.ToLower(c, CultureInfo.CurrentCulture));
         engine.TryConvertRomaji();
-        context.NotifyBufferChanged();
         return true;
     }
 
@@ -32,7 +32,6 @@ public abstract class StateBase
         if (context.RomajiBuffer.Length > 0)
         {
             context.RomajiBuffer.Remove(context.RomajiBuffer.Length - 1, 1);
-            context.NotifyBufferChanged();
             return true;
         }
         return false;
@@ -55,21 +54,18 @@ public abstract class StateBase
     {
         context.IsAbbreviationMode = true;
         engine.ChangeState(engine.State);
-        context.NotifyBufferChanged();
         return true;
     }
 
-    protected static bool StartConversion(SkkEngine engine, SkkContext context)
+    protected static bool StartConversion(SkkEngine engine)
     {
         engine.StartConversion();
-        context.NotifyBufferChanged();
         return true;
     }
 
     protected static bool AppendToComposition(SkkContext context, char c)
     {
         context.CompositionBuffer.Append(c);
-        context.NotifyBufferChanged();
         return true;
     }
 
@@ -89,7 +85,7 @@ public abstract class StateBase
         }
         else if (context.OkuriPrefix == null && context.CompositionBuffer.Length > 0)
         {
-            if (context.RomajiBuffer.Length == 1 && context.RomajiBuffer[0] == 'n')
+            if (context.RomajiBuffer.Length == 1 && context.RomajiBuffer.First == 'n')
             {
                 engine.HandleKanaProduced("ん");
                 context.RomajiBuffer.Clear();
@@ -116,7 +112,6 @@ public abstract class StateBase
             {
                 context.OkuriPrefix = null;
             }
-            context.NotifyBufferChanged();
             return true;
         }
         return false;
@@ -165,12 +160,9 @@ public abstract class StateBase
         return vkCode >= 0x21 && vkCode <= 0x28;
     }
 
-    protected static bool SwitchState(SkkEngine engine, SkkState newState, bool commit = true)
+    protected static bool SwitchState(SkkEngine engine, SkkState newState)
     {
-        if (commit)
-        {
-            engine.CommitAll();
-        }
+        engine.CommitAll();
         engine.ChangeState(newState);
         return true;
     }
@@ -191,11 +183,11 @@ public abstract class StateBase
 
     protected static bool HandleCommonCtrlKeys(SkkEngine engine, SkkContext context, int vkCode)
     {
-        if (vkCode == SkkKeyConstants.VkJ)
+        if (vkCode == SkkConstants.VkJ)
         {
             return CommitAll(engine);
         }
-        if (vkCode == 0x47)
+        if (vkCode == SkkConstants.VkG)
         {
             return TryResetBuffers(engine, context);
         }

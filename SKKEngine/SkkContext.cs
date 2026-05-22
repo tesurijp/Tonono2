@@ -7,126 +7,103 @@ using Tonono2.SKKEngine.States;
 
 namespace Tonono2.SKKEngine;
 
+public class CompositionBuffer(Action NotifyChanged)
+{
+    private readonly StringBuilder buffer = new();
+    private CompositionBuffer WrapAction(Action action)
+    {
+        action();
+        NotifyChanged();
+        return this;
+    }
+    public CompositionBuffer Clear() => WrapAction(() => buffer.Clear());
+    public CompositionBuffer Append(string st) => WrapAction(() => buffer.Append(st));
+    public CompositionBuffer Append(char ch) => WrapAction(() => buffer.Append(ch));
+    public CompositionBuffer Remove(int start, int length) => WrapAction(() => buffer.Remove(start, length));
+    public override string ToString() => buffer.ToString();
+    public int Length => buffer.Length;
+    public char First => buffer[0];
+}
+
 public class SkkContext : INotifyPropertyChanged
 {
     public Func<SkkEngine, SkkKeyCommand, bool> ProcessKey { get; set; } = DisabledState.ProcessKey;
+    public SkkContext()
+    {
+        RomajiBuffer  = new(NotifyBufferChanged);
+        CompositionBuffer  = new(NotifyBufferChanged);
+        NotifyBufferChanged();
+    }
+
+    public CompositionBuffer RomajiBuffer { get; }
+    public CompositionBuffer CompositionBuffer { get; }
+
+
+    private void SetProperty<T>(ref T current, T newvalue, params IEnumerable<string> names)
+    {
+        if (current is null || (!current.Equals(newvalue)))
+        {
+            current = newvalue;
+            foreach (var name in names)
+            {
+                OnPropertyChanged(name);
+            }
+        }
+    }
 
     public SkkState State
     {
         get => field;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged(nameof(StatusText));
-                OnPropertyChanged(nameof(IsVisible));
-            }
-        }
+        set => SetProperty(ref field, value, nameof(StatusText), nameof(IsVisible));
     } = SkkState.Disabled;
 
-    public StringBuilder RomajiBuffer { get; } = new();
-    public StringBuilder CompositionBuffer { get; } = new();
 
     public bool IsConversionMode
     {
         get => field;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged(nameof(Composition));
-                OnPropertyChanged(nameof(IsVisible));
-            }
-        }
+        set => SetProperty(ref field, value, nameof(Composition), nameof(IsVisible));
     }
 
     public bool IsAbbreviationMode
     {
         get => field;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged(nameof(Composition));
-            }
-        }
+        set => SetProperty(ref field, value, nameof(Composition));
     }
 
     public string? OkuriPrefix
     {
         get => field;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged(nameof(Composition));
-            }
-        }
+        set => SetProperty(ref field, value, nameof(Composition));
     }
 
     public string ReadingBeforeOkuri
     {
         get => field;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged(nameof(Composition));
-            }
-        }
+        set => SetProperty(ref field, value, nameof(Composition));
     } = "";
 
     public List<string> Candidates
     {
         get => field;
-        set
-        {
-            field = value;
-            OnPropertyChanged(nameof(Composition));
-            OnPropertyChanged(nameof(CandidateList));
-        }
+        set => SetProperty(ref field, value, nameof(Composition), nameof(CandidateList));
     } = [];
 
     public int CandidateIndex
     {
         get => field;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged(nameof(Composition));
-                OnPropertyChanged(nameof(CandidateList));
-            }
-        }
+        set => SetProperty(ref field, value, nameof(Composition), nameof(CandidateList));
     } = -1;
 
     public List<string> Completions
     {
         get => field;
-        set
-        {
-            field = value;
-            OnPropertyChanged(nameof(Composition));
-        }
+        set => SetProperty(ref field, value, nameof(Composition));
     } = [];
 
     public int CompletionIndex
     {
         get => field;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged(nameof(Composition));
-            }
-        }
+        set => SetProperty(ref field, value, nameof(Composition));
     } = -1;
 
     public string OriginalReadingBeforeCompletion { get; set; } = "";
@@ -134,54 +111,25 @@ public class SkkContext : INotifyPropertyChanged
     public int RecursionDepth
     {
         get => field;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged(nameof(StatusText));
-            }
-        }
+        set => SetProperty(ref field, value, nameof(StatusText));
     }
 
     public bool IsInRegistrationMode
     {
         get => field;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged(nameof(IsVisible));
-                OnPropertyChanged(nameof(IsInRegistrationMode));
-            }
-        }
+        set => SetProperty(ref field, value, nameof(IsVisible), nameof(IsInRegistrationMode));
     }
 
     public string RegistrationReading
     {
         get => field;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
+        set => SetProperty(ref field, value, nameof(RegistrationReading));
     } = "";
 
     public string RegistrationWord
     {
         get => field;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
+        set => SetProperty(ref field, value, nameof(RegistrationWord));
     } = "";
 
 
@@ -193,37 +141,41 @@ public class SkkContext : INotifyPropertyChanged
         {
             if (CandidateIndex >= 0 && CandidateIndex < Candidates.Count)
             {
-                var result = (CandidateIndex >= 4) ? "▼" : "▼" + Candidates[CandidateIndex];
+                var sb = new StringBuilder();
+                sb.Append(SkkConstants.ConvertPrefix);
+                if (CandidateIndex < 4) sb.Append(Candidates[CandidateIndex]);
                 if (OkuriPrefix != null)
                 {
                     var bufferStr = CompositionBuffer.ToString();
                     var start = Math.Min(ReadingBeforeOkuri.Length, bufferStr.Length);
                     var okuriDisplay = string.Concat(bufferStr.AsSpan(start), RomajiBuffer.ToString());
-                    result += "[" + okuriDisplay + "]";
+                    sb.Append('[');
+                    sb.Append(okuriDisplay);
+                    sb.Append(']');
                 }
-                return result;
+                return sb.ToString();
             }
 
             if (CompletionIndex >= 0 && CompletionIndex < Completions.Count)
             {
-                var prefix = IsAbbreviationMode ? " /" : "▽";
-                return prefix + Completions[CompletionIndex] + RomajiBuffer.ToString();
+                return $"{SkkConstants.CompositionPrefix}{Completions[CompletionIndex]}{RomajiBuffer}";
             }
-
-            var prefixStr = IsAbbreviationMode ? " /" : (IsConversionMode ? "▽" : "");
-            return prefixStr + CompositionBuffer.ToString() + RomajiBuffer.ToString();
+            return $"{SkkConstants.CompositionPrefix}{CompositionBuffer}{RomajiBuffer}";
         }
     }
+
+    public bool ListConversion => CandidateIndex >= 4;
+    public static int ListPageSize => 7;
 
     public string CandidateList
     {
         get
         {
-            if (CandidateIndex >= 4)
+            if (ListConversion)
             {
                 var sb = new StringBuilder();
-                var pageStart = (CandidateIndex / 7) * 7;
-                for (var i = 0; i < 7; i++)
+                var pageStart = (CandidateIndex / ListPageSize) * ListPageSize ;
+                for (var i = 0; i < ListPageSize; i++)
                 {
                     var idx = pageStart + i;
                     if (idx >= Candidates.Count)
@@ -266,16 +218,14 @@ public class SkkContext : INotifyPropertyChanged
         Completions.Clear();
         CompositionBuffer.Clear();
         RomajiBuffer.Clear();
-        NotifyBufferChanged();
     }
 
     public void NotifyBufferChanged()
     {
-        OnPropertyChanged(nameof(Composition));
         OnPropertyChanged(nameof(IsVisible));
+        OnPropertyChanged(nameof(Composition));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
-    protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    protected virtual void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }
