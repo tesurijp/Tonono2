@@ -15,17 +15,15 @@ public class KanaConverter(Dictionary<string, string> romajiTable)
 
     public string ToKana(string romaji) => RomajiToKana.TryGetValue(romaji, out var hiragana) ? hiragana : string.Empty;
 
-    public static string HiraToKatakana(string hiragana) => KanaToKana(hiragana, c => (c >= 'ぁ' && c <= 'ゖ'), 0x60);
-    public static string KataToHiragana(string katakana) => KanaToKana(katakana, c => (c >= 'ァ' && c <= 'ヶ'), -0x60);
-    private static string KanaToKana(string kana, Func<char, bool> rangePredict, int offset)
+    public static string HiraToKatakana(string hiragana) => KanaToKana(hiragana, c => (c >= 'ぁ' && c <= 'ゖ') ? (char)(c + 0x60) : c);
+    public static string KataToHiragana(string katakana) => KanaToKana(katakana, c => (c >= 'ァ' && c <= 'ヶ') ? (char)(c - 0x60) : c);
+    private static string KanaToKana(string kana, Func<char,char> addOffset)
     {
         var sb = new StringBuilder();
         foreach (var c in kana)
         {
-            if (rangePredict(c))
-                sb.Append((char)(c + offset));
-            else
-                sb.Append(c);
+            var ch = addOffset(c);
+            sb.Append(ch);
         }
         return sb.ToString();
     }

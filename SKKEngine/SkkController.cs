@@ -1,9 +1,7 @@
 using System;
 using System.IO;
 using System.Threading;
-using System.Linq;
 using Tonono2.Win32;
-using Tonono2;
 
 namespace Tonono2.SKKEngine;
 
@@ -32,7 +30,7 @@ public sealed class SkkController : IDisposable
             NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
             EnableRaisingEvents = true
         };
-        _configWatcher.Changed += OnConfigChanged;
+        _configWatcher.Changed += (_, _) => OnConfigChanged();
     }
 
     private void LoadConfig()
@@ -54,7 +52,7 @@ public sealed class SkkController : IDisposable
         }
     }
 
-    private void OnConfigChanged(object sender, FileSystemEventArgs e)
+    private void OnConfigChanged()
     {
         DebugLogger.Log("config.yaml change detected.");
         var oldConfig = Config;
@@ -66,12 +64,11 @@ public sealed class SkkController : IDisposable
         }
     }
 
-    private void OnKeyIntercepted(object? sender, KeyboardKeyEventArgs e)
+    private void OnKeyIntercepted(KeyInfo e)
     {
-        if (e.VirtualKeyCode == 0x1B && e.IsKeyDown && Engine.State != SkkState.Disabled && IsViCompatibleAppActive())
+        if (e.VirtualKeyCode == SkkKeyConstants.VkEscape && e.IsKeyDown && Engine.State != SkkState.Disabled && IsViCompatibleAppActive())
         {
             Engine.CancelAndDisable();
-            // e.Handled is false by default, so ESC is passed through
             return;
         }
 

@@ -5,8 +5,7 @@ using Tonono2.UI;
 
 namespace Tonono2;
 
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1001:破棄可能なフィールドを所有する型は、破棄可能でなければなりません", Justification = "<保留中>")]
-public partial class App : Application
+public partial class App : Application, IDisposable
 {
     private SkkController? controller;
     private SystemMenu? trayIcon;
@@ -22,14 +21,21 @@ public partial class App : Application
         base.OnStartup(e);
 
         controller = new();
-        ui = new(controller);
-        trayIcon = new(ui, controller);
+        ui = new() { DataContext = controller.Engine.Context };
+        trayIcon = new(ui, controller.Config);
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
-        trayIcon?.Dispose();
-        controller?.Dispose();
+        Dispose();
         base.OnExit(e);
+    }
+
+    public void Dispose()
+    {
+        trayIcon?.Dispose();
+        ui?.Close();
+        controller?.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

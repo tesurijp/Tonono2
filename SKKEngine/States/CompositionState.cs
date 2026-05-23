@@ -1,9 +1,9 @@
 using System.Globalization;
 
 namespace Tonono2.SKKEngine.States;
-public class CompositionState : ISkkEditorState
+public static class CompositionState
 {
-    public bool ProcessKey(SkkEngine engine, SkkKeyCommand command)
+    public static  bool ProcessKey(SkkEngine engine, SkkKeyCommand command)
     {
         var context = engine.Context;
         var vkCode = command.VkCode;
@@ -42,7 +42,7 @@ public class CompositionState : ISkkEditorState
         // Q -> toggle or flip
         if (vkCode == SkkKeyConstants.VkQ)
         {
-            if (engine.CompositionBuffer.Length > 0 || engine.RomajiBuffer.Length > 0)
+            if (context.CompositionBuffer.Length > 0 || context.RomajiBuffer.Length > 0)
             {
                 engine.FlipAndCommit();
             }
@@ -56,7 +56,7 @@ public class CompositionState : ISkkEditorState
         // / -> Abbreviation mode
         if (vkCode == SkkKeyConstants.VkSlash && !shiftPressed)
         {
-            if (!context.IsConversionMode && !context.IsAbbreviationMode && engine.CompositionBuffer.Length == 0)
+            if (!context.IsConversionMode && !context.IsAbbreviationMode && context.CompositionBuffer.Length == 0)
             {
                 context.IsAbbreviationMode = true;
                 engine.ChangeState(engine.State);
@@ -72,7 +72,7 @@ public class CompositionState : ISkkEditorState
             {
                 if (context.CompletionIndex == -1)
                 {
-                    context.OriginalReadingBeforeCompletion = engine.CompositionBuffer.ToString();
+                    context.OriginalReadingBeforeCompletion = context.CompositionBuffer.ToString();
                     context.Completions = [ .. engine.Dictionary.GetCompletions(context.OriginalReadingBeforeCompletion) ];
                     if (context.Completions.Count > 0)
                     {
@@ -102,8 +102,8 @@ public class CompositionState : ISkkEditorState
         {
             if (context.CompletionIndex >= 0)
             {
-                engine.CompositionBuffer.Clear();
-                engine.CompositionBuffer.Append(context.Completions[context.CompletionIndex]);
+                context.CompositionBuffer.Clear();
+                context.CompositionBuffer.Append(context.Completions[context.CompletionIndex]);
                 context.CompletionIndex = -1;
                 context.Completions.Clear();
                 engine.StartConversion();
@@ -111,7 +111,7 @@ public class CompositionState : ISkkEditorState
                 return true;
             }
 
-            if (engine.CompositionBuffer.Length > 0 || engine.RomajiBuffer.Length > 0)
+            if (context.CompositionBuffer.Length > 0 || context.RomajiBuffer.Length > 0)
             {
                 engine.StartConversion();
                 context.NotifyBufferChanged();
@@ -122,23 +122,23 @@ public class CompositionState : ISkkEditorState
         // Backspace
         if (vkCode == SkkKeyConstants.VkBack)
         {
-            if (engine.RomajiBuffer.Length > 0)
+            if (context.RomajiBuffer.Length > 0)
             {
-                engine.RomajiBuffer.Remove(engine.RomajiBuffer.Length - 1, 1);
+                context.RomajiBuffer.Remove(context.RomajiBuffer.Length - 1, 1);
                 context.NotifyBufferChanged();
                 return true;
             }
-            if (engine.CompositionBuffer.Length > 0)
+            if (context.CompositionBuffer.Length > 0)
             {
-                engine.CompositionBuffer.Remove(engine.CompositionBuffer.Length - 1, 1);
-                if (engine.CompositionBuffer.Length == 0)
+                context.CompositionBuffer.Remove(context.CompositionBuffer.Length - 1, 1);
+                if (context.CompositionBuffer.Length == 0)
                 {
                     context.IsConversionMode = false;
                     context.IsAbbreviationMode = false;
                     context.OkuriPrefix = null;
                     engine.ChangeState(engine.State); // Transitions to IdleState
                 }
-                else if (context.OkuriPrefix != null && engine.CompositionBuffer.Length < context.ReadingBeforeOkuri.Length)
+                else if (context.OkuriPrefix != null && context.CompositionBuffer.Length < context.ReadingBeforeOkuri.Length)
                 {
                     context.OkuriPrefix = null;
                 }
@@ -161,7 +161,7 @@ public class CompositionState : ISkkEditorState
             
             if (context.IsAbbreviationMode)
             {
-                engine.CompositionBuffer.Append(c);
+                context.CompositionBuffer.Append(c);
                 context.NotifyBufferChanged();
                 return true;
             }
@@ -185,23 +185,24 @@ public class CompositionState : ISkkEditorState
                         context.ReadingBeforeOkuri = "";
                         engine.ChangeState(engine.State);
                     }
-                    else if (context.OkuriPrefix == null && engine.CompositionBuffer.Length > 0)
+                    else if (context.OkuriPrefix == null && context.CompositionBuffer.Length > 0)
                     {
-                        if (engine.RomajiBuffer.Length == 1 && engine.RomajiBuffer[0] == 'n')
+                        if (context.RomajiBuffer.Length == 1 && context.RomajiBuffer[0] == 'n')
                         {
                             engine.HandleKanaProduced("ん");
-                            engine.RomajiBuffer.Clear();
+                            context.RomajiBuffer.Clear();
                         }
                         context.OkuriPrefix = char.ToLower(c, CultureInfo.CurrentCulture).ToString();
-                        context.ReadingBeforeOkuri = engine.CompositionBuffer.ToString();
+                        context.ReadingBeforeOkuri = context.CompositionBuffer.ToString();
                         engine.ChangeState(engine.State);
                     }
                 }
 
-                engine.RomajiBuffer.Append(char.ToLower(c, CultureInfo.CurrentCulture));
+                context.RomajiBuffer.Append(char.ToLower(c, CultureInfo.CurrentCulture));
                 engine.TryConvertRomaji();
                 context.NotifyBufferChanged();
                 return true;
+
             }
             else
             {

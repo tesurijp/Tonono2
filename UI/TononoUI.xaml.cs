@@ -8,16 +8,12 @@ namespace Tonono2.UI;
 
 public partial class TononoUI : Window
 {
-    private readonly SkkContext _context;
-
-    public TononoUI(SkkController controller)
+    public TononoUI()
     {
         InitializeComponent();
-        _context = controller.Engine.Context;
-        DataContext = _context;
 
         Loaded += (_, _) => WindowPositioner.SetNonActiveWindow(this);
-        IsVisibleChanged += (_, e) => _ = e.NewValue is true ? UpdatePosition() : false;
+        IsVisibleChanged += (_, e) => _ = e.NewValue is true && UpdatePosition();
     }
 
     private bool UpdatePosition()

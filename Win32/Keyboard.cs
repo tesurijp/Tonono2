@@ -7,10 +7,8 @@ using static Tonono2.Win32.NativeConstants;
 
 namespace Tonono2.Win32;
 
-public class KeyboardKeyEventArgs(int vkCode, bool isKeyDown) : EventArgs
+public record  class KeyInfo(int VirtualKeyCode, bool IsKeyDown) 
 {
-    public int VirtualKeyCode { get; } = vkCode;
-    public bool IsKeyDown { get; } = isKeyDown;
     public bool Handled { get; set; }
 }
 
@@ -18,8 +16,7 @@ public sealed class KeyboardHook : IDisposable
 {
     private IntPtr hookId = IntPtr.Zero;
     private NativeMethods.LowLevelKeyboardProc? hookProc;
-
-    public event EventHandler<KeyboardKeyEventArgs>? KeyIntercepted;
+    public Action<KeyInfo>? KeyIntercepted { get; set; }
 
     public void Install()
     {
@@ -46,13 +43,13 @@ public sealed class KeyboardHook : IDisposable
 
                     if ((hook.flags & NativeMethods.KbdLlFlags.LLKHF_INJECTED) == 0)
                     {
-                        var args = new KeyboardKeyEventArgs((int)hook.vkCode, isKeyDown);
-                    KeyIntercepted?.Invoke(this, args);
+                        var args = new KeyInfo((int)hook.vkCode, isKeyDown);
+                        KeyIntercepted?.Invoke(args);
 
                         if (args.Handled)
                         {
                             return 1;
-                        } 
+                        }
                     }
                 }
             }

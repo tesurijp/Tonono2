@@ -1,8 +1,8 @@
 namespace Tonono2.SKKEngine.States;
 
-public class DisabledState : ISkkEditorState
+public static class DisabledState
 {
-    public bool ProcessKey(SkkEngine engine, SkkKeyCommand command)
+    public static bool ProcessKey(SkkEngine engine, SkkKeyCommand command)
     {
         if (command.Control && command.VkCode == SkkKeyConstants.VkJ)
         {

@@ -3,22 +3,20 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Reflection;
 using System.Windows;
-using Tonono2.SKKEngine;
 using Tonono2.Win32;
 
 namespace Tonono2.UI;
 
-
 public sealed class SystemMenu : IDisposable
 {
-    private readonly SkkController controller;
+    private readonly AppConfig config;
     private readonly TrayIcon trayicon;
     private readonly Icon icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location)!;
     private InfoWindow? infoWindow;
 
-    public SystemMenu(Window ui, SkkController controller)
+    public SystemMenu(Window ui, AppConfig config)
     {
-        this.controller = controller;
+        this.config = config;
         trayicon = new(icon, "Tonono", ui, [
             new("情報", ShowInfoWindow ),
             new("設定", OpenConfig  ),
@@ -48,7 +46,7 @@ public sealed class SystemMenu : IDisposable
         }
         else
         {
-            infoWindow = new(controller);
+            infoWindow = new(config);
             infoWindow.Show();
         }
     }

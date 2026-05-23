@@ -1,14 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Text;
-using Tonono2.Win32;
-using static Tonono2.Win32.NativeConstants;
 using Tonono2.SKKEngine.States;
+using Tonono2.Win32;
 
 namespace Tonono2.SKKEngine;
 
 public record class SkkKeyCommand(int VkCode, bool Shift, bool Control, char? Ch);
+
 public enum SkkState
 {
     Disabled,
@@ -23,8 +21,6 @@ public class SkkEngine
     public SkkContext Context { get; } = new();
 
     public SkkState State => Context.State;
-    internal StringBuilder RomajiBuffer => Context.RomajiBuffer;
-    internal StringBuilder CompositionBuffer => Context.CompositionBuffer;
 
     internal readonly KanaConverter kanaConverter;
     private readonly DictionaryRegistrar registrar;
@@ -38,15 +34,9 @@ public class SkkEngine
         this.zenkakuTable = zenkakuTable;
         this.Dictionary = dictionary;
         this.registrar = new DictionaryRegistrar(dictionary);
-        Context.EditorState = new DisabledState();
     }
 
-    public string CurrentInput => RomajiBuffer.ToString();
-    public int RecursionDepth => registrar.RecursionDepth;
     public bool IsInRegistrationMode => registrar.IsInRegistrationMode;
-
-    public string RegistrationReading => registrar.RegistrationReading;
-    public string RegistrationWord => registrar.RegistrationWord;
 
     public void UpdateConfig(AppConfig config)
     {
@@ -54,15 +44,6 @@ public class SkkEngine
         zenkakuTable = config.ZenkakuTable;
         Dictionary.Reload(config.DictionaryPaths);
         Context.NotifyBufferChanged();
-    }
-
-    public string Composition => Context.Composition;
-
-    public string CandidateList => Context.CandidateList;
-
-    public void Initialize()
-    {
-        Context.EditorState = new DisabledState();
     }
 
     public bool ProcessKey(int vkCode, bool isKeyDown)
@@ -76,7 +57,7 @@ public class SkkEngine
         var ch = Keyboard.VkToChar(vkCode, shiftPressed);
         var command = new SkkKeyCommand(vkCode, shiftPressed, ctrlPressed, ch == '\0' ? null : ch);
 
-        return Context.EditorState?.ProcessKey(this, command) ?? false;
+        return Context.ProcessKey(this, command);
     }
 
     internal void StartRegistration(string reading)
@@ -142,10 +123,10 @@ public class SkkEngine
 
     internal void StartConversion()
     {
-        if (RomajiBuffer.ToString() == "n")
+        if (Context.RomajiBuffer.ToString() == "n")
         {
             HandleKanaProduced("ん");
-            RomajiBuffer.Clear();
+            Context.RomajiBuffer.Clear();
         }
         var key = GetDictionaryKey();
         Context.Candidates = [ .. Dictionary.GetCandidates(key) ];
@@ -161,19 +142,19 @@ public class SkkEngine
         }
     }
 
-    internal string GetDictionaryKey() => Context.OkuriPrefix != null ? Context.ReadingBeforeOkuri + Context.OkuriPrefix : CompositionBuffer.ToString();
+    internal string GetDictionaryKey() => Context.OkuriPrefix != null ? Context.ReadingBeforeOkuri + Context.OkuriPrefix : Context.CompositionBuffer.ToString();
 
     internal void TryConvertRomaji()
     {
-        while (RomajiBuffer.Length > 0)
+        while (Context.RomajiBuffer.Length > 0)
         {
-            var romaji = RomajiBuffer.ToString();
+            var romaji = Context.RomajiBuffer.ToString();
 
             var kana = kanaConverter.ToKana(romaji);
             if (!string.IsNullOrEmpty(kana))
             {
                 HandleKanaProduced(kana);
-                RomajiBuffer.Clear();
+                Context.RomajiBuffer.Clear();
                 if (Context.IsConversionMode && Context.OkuriPrefix != null && Context.CandidateIndex == -1)
                 {
                     StartConversion();
@@ -188,13 +169,13 @@ public class SkkEngine
                 if (!isVowel)
                 {
                     HandleKanaProduced("ん");
-                    RomajiBuffer.Remove(0, 1);
+                    Context.RomajiBuffer.Remove(0, 1);
                     continue;
                 }
                 else if (next == 'n')
                 {
                     HandleKanaProduced("ん");
-                    RomajiBuffer.Remove(0, 2);
+                    Context.RomajiBuffer.Remove(0, 2);
                     continue;
                 }
             }
@@ -202,7 +183,7 @@ public class SkkEngine
             if (romaji.Length >= 2 && romaji[0] == romaji[1] && romaji[0] != 'n' && char.IsLetter(romaji[0]))
             {
                 HandleKanaProduced("っ");
-                RomajiBuffer.Remove(0, 1);
+                Context.RomajiBuffer.Remove(0, 1);
                 if (Context.IsConversionMode && Context.OkuriPrefix != null && Context.CandidateIndex == -1)
                 {
                     StartConversion();
@@ -216,9 +197,9 @@ public class SkkEngine
             }
             else
             {
-                DebugLogger.Log($"No match in romaji table for: {RomajiBuffer}. Flushing: {RomajiBuffer[0]}");
-                HandleKanaProduced(RomajiBuffer[0].ToString());
-                RomajiBuffer.Remove(0, 1);
+                DebugLogger.Log($"No match in romaji table for: {Context.RomajiBuffer}. Flushing: {Context.RomajiBuffer[0]}");
+                HandleKanaProduced(Context.RomajiBuffer[0].ToString());
+                Context.RomajiBuffer.Remove(0, 1);
             }
         }
     }
@@ -232,7 +213,7 @@ public class SkkEngine
 
         if (Context.IsConversionMode)
         {
-            CompositionBuffer.Append(kana);
+            Context.CompositionBuffer.Append(kana);
             ChangeState(Context.State); // Ensure we are in CompositionState
         }
         else
@@ -243,7 +224,7 @@ public class SkkEngine
 
     internal void FlipAndCommit()
     {
-        var text = CompositionBuffer.ToString();
+        var text = Context.CompositionBuffer.ToString();
         if (Context.State == SkkState.Hiragana)
         {
             text = KanaConverter.HiraToKatakana(text);
@@ -284,16 +265,16 @@ public class SkkEngine
             Dictionary.AddWord(GetDictionaryKey(), committedText);
             if (Context.OkuriPrefix != null)
             {
-                var bufferStr = CompositionBuffer.ToString();
+                var bufferStr = Context.CompositionBuffer.ToString();
                 var start = Math.Min(Context.ReadingBeforeOkuri.Length, bufferStr.Length);
                 var okuriKana = bufferStr[start..];
                 committedText += okuriKana;
-                committedText += RomajiBuffer.ToString();
+                committedText += Context.RomajiBuffer.ToString();
             }
         }
         else
         {
-            committedText = CompositionBuffer.ToString() + RomajiBuffer.ToString();
+            committedText = Context.CompositionBuffer.ToString() + Context.RomajiBuffer.ToString();
         }
 
         if (!string.IsNullOrEmpty(committedText))
@@ -311,17 +292,7 @@ public class SkkEngine
 
     internal void ResetBuffers()
     {
-        Context.OkuriPrefix = null;
-        Context.ReadingBeforeOkuri = "";
-        Context.IsConversionMode = false;
-        Context.IsAbbreviationMode = false;
-        Context.CandidateIndex = -1;
-        Context.Candidates.Clear();
-        Context.CompletionIndex = -1;
-        Context.Completions.Clear();
-        CompositionBuffer.Clear();
-        RomajiBuffer.Clear();
-        Context.NotifyBufferChanged();
+        Context.ResetBuffers();
         ChangeState(Context.State);
     }
 
@@ -330,25 +301,25 @@ public class SkkEngine
         Context.State = newState;
         if (IsInRegistrationMode)
         {
-            Context.EditorState = new RegistrationState();
+            Context.ProcessKey = RegistrationState.ProcessKey;
         }
         else if (Context.CandidateIndex >= 0)
         {
-            Context.EditorState = new ConversionState();
+            Context.ProcessKey = ConversionState.ProcessKey;
         }
-        else if (Context.IsConversionMode || Context.IsAbbreviationMode || CompositionBuffer.Length > 0 || RomajiBuffer.Length > 0)
+        else if (Context.IsConversionMode || Context.IsAbbreviationMode || Context.CompositionBuffer.Length > 0 || Context.RomajiBuffer.Length > 0)
         {
-            Context.EditorState = new CompositionState();
+            Context.ProcessKey = CompositionState.ProcessKey;
         }
         else
         {
-            Context.EditorState = newState switch
+            Context.ProcessKey = newState switch
             {
-                SkkState.Disabled => new DisabledState(),
-                SkkState.Hiragana => new IdleState(),
-                SkkState.Katakana => new IdleState(),
-                SkkState.Zenkaku => new ZenkakuState(),
-                _ => Context.EditorState
+                SkkState.Disabled => DisabledState.ProcessKey,
+                SkkState.Hiragana => IdleState.ProcessKey,
+                SkkState.Katakana => IdleState.ProcessKey,
+                SkkState.Zenkaku => ZenkakuState.ProcessKey,
+                _ => Context.ProcessKey
             };
         }
     }

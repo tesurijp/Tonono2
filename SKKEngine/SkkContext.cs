@@ -3,23 +3,13 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Tonono2.SKKEngine.States;
 
 namespace Tonono2.SKKEngine;
 
 public class SkkContext : INotifyPropertyChanged
 {
-    public ISkkEditorState EditorState
-    {
-        get => field;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    } = null!;
+    public Func<SkkEngine, SkkKeyCommand, bool> ProcessKey { get; set; } = DisabledState.ProcessKey;
 
     public SkkState State
     {
@@ -29,7 +19,6 @@ public class SkkContext : INotifyPropertyChanged
             if (field != value)
             {
                 field = value;
-                OnPropertyChanged();
                 OnPropertyChanged(nameof(StatusText));
                 OnPropertyChanged(nameof(IsVisible));
             }
@@ -47,7 +36,6 @@ public class SkkContext : INotifyPropertyChanged
             if (field != value)
             {
                 field = value;
-                OnPropertyChanged();
                 OnPropertyChanged(nameof(Composition));
                 OnPropertyChanged(nameof(IsVisible));
             }
@@ -62,7 +50,6 @@ public class SkkContext : INotifyPropertyChanged
             if (field != value)
             {
                 field = value;
-                OnPropertyChanged();
                 OnPropertyChanged(nameof(Composition));
             }
         }
@@ -76,7 +63,6 @@ public class SkkContext : INotifyPropertyChanged
             if (field != value)
             {
                 field = value;
-                OnPropertyChanged();
                 OnPropertyChanged(nameof(Composition));
             }
         }
@@ -90,7 +76,6 @@ public class SkkContext : INotifyPropertyChanged
             if (field != value)
             {
                 field = value;
-                OnPropertyChanged();
                 OnPropertyChanged(nameof(Composition));
             }
         }
@@ -102,7 +87,6 @@ public class SkkContext : INotifyPropertyChanged
         set
         {
             field = value;
-            OnPropertyChanged();
             OnPropertyChanged(nameof(Composition));
             OnPropertyChanged(nameof(CandidateList));
         }
@@ -116,7 +100,6 @@ public class SkkContext : INotifyPropertyChanged
             if (field != value)
             {
                 field = value;
-                OnPropertyChanged();
                 OnPropertyChanged(nameof(Composition));
                 OnPropertyChanged(nameof(CandidateList));
             }
@@ -129,7 +112,6 @@ public class SkkContext : INotifyPropertyChanged
         set
         {
             field = value;
-            OnPropertyChanged();
             OnPropertyChanged(nameof(Composition));
         }
     } = [];
@@ -142,24 +124,12 @@ public class SkkContext : INotifyPropertyChanged
             if (field != value)
             {
                 field = value;
-                OnPropertyChanged();
                 OnPropertyChanged(nameof(Composition));
             }
         }
     } = -1;
 
-    public string OriginalReadingBeforeCompletion
-    {
-        get => field;
-        set
-        {
-            if (field != value)
-            {
-                field = value;
-                OnPropertyChanged();
-            }
-        }
-    } = "";
+    public string OriginalReadingBeforeCompletion { get; set; } = "";
 
     public int RecursionDepth
     {
@@ -169,7 +139,6 @@ public class SkkContext : INotifyPropertyChanged
             if (field != value)
             {
                 field = value;
-                OnPropertyChanged();
                 OnPropertyChanged(nameof(StatusText));
             }
         }
@@ -183,7 +152,6 @@ public class SkkContext : INotifyPropertyChanged
             if (field != value)
             {
                 field = value;
-                OnPropertyChanged();
                 OnPropertyChanged(nameof(IsVisible));
                 OnPropertyChanged(nameof(IsInRegistrationMode));
             }
@@ -285,6 +253,21 @@ public class SkkContext : INotifyPropertyChanged
         SkkState.Zenkaku => "全",
         _ => "？"
     };
+
+    internal void ResetBuffers()
+    {
+        OkuriPrefix = null;
+        ReadingBeforeOkuri = "";
+        IsConversionMode = false;
+        IsAbbreviationMode = false;
+        CandidateIndex = -1;
+        Candidates.Clear();
+        CompletionIndex = -1;
+        Completions.Clear();
+        CompositionBuffer.Clear();
+        RomajiBuffer.Clear();
+        NotifyBufferChanged();
+    }
 
     public void NotifyBufferChanged()
     {

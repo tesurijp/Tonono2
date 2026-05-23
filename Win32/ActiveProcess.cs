@@ -9,24 +9,26 @@ public static class ActiveProcess
     public  static string GetActiveProcessPath()
     {
         var hwnd = NativeMethods.GetForegroundWindow();
-        if (hwnd == IntPtr.Zero) return "";
-
-        NativeMethods.GetWindowThreadProcessId(hwnd, out var pid);
-        var hProcess = NativeMethods.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
-        if (hProcess == IntPtr.Zero) return "";
-
-        try
+        if (hwnd != IntPtr.Zero)
         {
-            var buffer = new char[1024];
-            var size = (uint)buffer.Length;
-            if (NativeMethods.QueryFullProcessImageName(hProcess, 0, buffer, ref size))
+            NativeMethods.GetWindowThreadProcessId(hwnd, out var pid);
+            var hProcess = NativeMethods.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+            if (hProcess != IntPtr.Zero)
             {
-                return new string(buffer, 0, (int)size);
+                try
+                {
+                    var buffer = new char[1024];
+                    var size = (uint)buffer.Length;
+                    if (NativeMethods.QueryFullProcessImageName(hProcess, 0, buffer, ref size))
+                    {
+                        return new string(buffer, 0, (int)size);
+                    }
+                }
+                finally
+                {
+                    NativeMethods.CloseHandle(hProcess);
+                }
             }
-        }
-        finally
-        {
-            NativeMethods.CloseHandle(hProcess);
         }
         return "";
     }

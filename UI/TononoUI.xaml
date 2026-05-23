@@ -3,33 +3,21 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:skkengine="clr-namespace:Tonono2.SKKEngine" d:DataContext="{d:DesignInstance Type=skkengine:SkkContext}"
         mc:Ignorable="d"
-        Title="TononoUI" SizeToContent="WidthAndHeight"
-        MinWidth="50" MinHeight="30"
-        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
-        Topmost="True" ShowInTaskbar="False" IsHitTestVisible="False"
+        Title="TononoUI" WindowStyle="None" Topmost="True" ShowInTaskbar="False" IsHitTestVisible="False"
+        SizeToContent="WidthAndHeight" Width="10" Height="10"
+        AllowsTransparency="True" Background="#80000000" Opacity="0.8"
         Visibility="{Binding IsVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-    <Grid>
-        <Border Background="#80000000" CornerRadius="5" Padding="5">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="5,0">
-                <!-- Status (e.g., [あ], [あ:2]) -->
-                <TextBlock Text="{Binding StatusText}" Foreground="White" FontSize="18" FontWeight="Bold" Margin="0,0,5,0"/>
-                
-                <!-- Registration Reading (Visible only in registration mode) -->
-                <StackPanel Orientation="Horizontal"
-                    Visibility="{Binding IsInRegistrationMode, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <TextBlock Text="【読】" Foreground="#FFA0A0A0" FontSize="14" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding RegistrationReading}" Foreground="Cyan" FontSize="18" Margin="0,0,10,0"/>
-                    <TextBlock Text="【語】" Foreground="#FFA0A0A0" FontSize="14" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding RegistrationWord}" Foreground="Lime" FontSize="18" Margin="0,0,10,0"/>
-                </StackPanel>
-
-                <!-- Normal Input / Composition -->
-                <TextBlock Text="{Binding Composition}" Foreground="White" FontSize="18"/>
-                
-                <!-- Candidate List (5th+) -->
-                <TextBlock Text="{Binding CandidateList}" Foreground="Yellow" FontSize="16" Margin="10,0,0,0"/>
-            </StackPanel>
-        </Border>
-    </Grid>
+    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="5,0" >
+        <TextBlock Text="{Binding StatusText}" Foreground="White" FontSize="18" FontWeight="Bold" Margin="0,0,5,0"/>
+        <StackPanel Orientation="Horizontal" Visibility="{Binding IsInRegistrationMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <TextBlock Text="【読】" Foreground="#FFA0A0A0" FontSize="14" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding RegistrationReading}" Foreground="Cyan" FontSize="18" Margin="0,0,10,0"/>
+            <TextBlock Text="【語】" Foreground="#FFA0A0A0" FontSize="14" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding RegistrationWord}" Foreground="Lime" FontSize="18" Margin="0,0,10,0"/>
+        </StackPanel>
+        <TextBlock Text="{Binding Composition}" Foreground="White" FontSize="18"/>
+        <TextBlock Text="{Binding CandidateList}" Foreground="Yellow" FontSize="16" Margin="10,0,0,0"/>
+    </StackPanel>
 </Window>

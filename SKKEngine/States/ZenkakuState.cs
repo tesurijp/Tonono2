@@ -1,10 +1,8 @@
-using Tonono2.Win32;
-
 namespace Tonono2.SKKEngine.States;
 
-public class ZenkakuState : ISkkEditorState
+public static class ZenkakuState 
 {
-    public bool ProcessKey(SkkEngine engine, SkkKeyCommand command)
+    public static bool ProcessKey(SkkEngine engine, SkkKeyCommand command)
     {
         var vkCode = command.VkCode;
 

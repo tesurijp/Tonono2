@@ -1,11 +1,8 @@
-using System;
-using System.Globalization;
-
 namespace Tonono2.SKKEngine.States;
 
-public class RegistrationState : ISkkEditorState
+public static class RegistrationState
 {
-    public bool ProcessKey(SkkEngine engine, SkkKeyCommand command)
+    public static bool ProcessKey(SkkEngine engine, SkkKeyCommand command)
     {
         var context = engine.Context;
         var vkCode = command.VkCode;
@@ -44,7 +41,7 @@ public class RegistrationState : ISkkEditorState
         // Return
         if (vkCode == SkkKeyConstants.VkReturn && !shiftPressed)
         {
-            if (engine.CompositionBuffer.Length == 0 && engine.RomajiBuffer.Length == 0 && context.CandidateIndex == -1)
+            if (context.CompositionBuffer.Length == 0 && context.RomajiBuffer.Length == 0 && context.CandidateIndex == -1)
             {
                 engine.FinishRegistration();
                 return true;
@@ -54,7 +51,7 @@ public class RegistrationState : ISkkEditorState
         // Backspace
         if (vkCode == SkkKeyConstants.VkBack)
         {
-            if (engine.RomajiBuffer.Length > 0 || engine.CompositionBuffer.Length > 0)
+            if (context.RomajiBuffer.Length > 0 || context.CompositionBuffer.Length > 0)
             {
                 // Let the "normal" input logic handle it first
             }
@@ -67,7 +64,6 @@ public class RegistrationState : ISkkEditorState
 
         // Delegate most input to IdleState (for Romaji/Kana conversion)
         // Since we are in RegistrationMode, CommitProducedText will append to the registrar.
-        var idle = new IdleState();
-        return idle.ProcessKey(engine, command);
+        return IdleState.ProcessKey(engine, command);
     }
 }

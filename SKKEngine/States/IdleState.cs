@@ -1,11 +1,10 @@
-using System;
 using System.Globalization;
 
 namespace Tonono2.SKKEngine.States;
 
-public class IdleState : ISkkEditorState
+public static class IdleState
 {
-    public bool ProcessKey(SkkEngine engine, SkkKeyCommand command)
+    public static bool ProcessKey(SkkEngine engine, SkkKeyCommand command)
     {
         var context = engine.Context;
         var vkCode = command.VkCode;
@@ -21,7 +20,7 @@ public class IdleState : ISkkEditorState
         // ESC: Cancellation
         if (vkCode == SkkKeyConstants.VkEscape)
         {
-            if (engine.CompositionBuffer.Length > 0 || engine.RomajiBuffer.Length > 0 || context.IsConversionMode)
+            if (context.CompositionBuffer.Length > 0 || context.RomajiBuffer.Length > 0 || context.IsConversionMode)
             {
                 engine.ResetBuffers();
                 return true;
@@ -39,7 +38,7 @@ public class IdleState : ISkkEditorState
             }
             if (vkCode == 0x47) // Ctrl+G
             {
-                if (engine.CompositionBuffer.Length > 0 || engine.RomajiBuffer.Length > 0)
+                if (context.CompositionBuffer.Length > 0 || context.RomajiBuffer.Length > 0)
                 {
                     engine.ResetBuffers();
                     return true;
@@ -66,7 +65,7 @@ public class IdleState : ISkkEditorState
         // Q -> toggle or flip
         if (vkCode == SkkKeyConstants.VkQ)
         {
-            if (engine.CompositionBuffer.Length > 0 || engine.RomajiBuffer.Length > 0)
+            if (context.CompositionBuffer.Length > 0 || context.RomajiBuffer.Length > 0)
             {
                 engine.FlipAndCommit();
             }
@@ -80,7 +79,7 @@ public class IdleState : ISkkEditorState
         // / -> Abbreviation mode
         if (vkCode == SkkKeyConstants.VkSlash && !shiftPressed)
         {
-            if (!context.IsConversionMode && !context.IsAbbreviationMode && engine.CompositionBuffer.Length == 0)
+            if (!context.IsConversionMode && !context.IsAbbreviationMode && context.CompositionBuffer.Length == 0)
             {
                 context.IsAbbreviationMode = true;
                 engine.ChangeState(engine.State);
@@ -92,22 +91,22 @@ public class IdleState : ISkkEditorState
         // BS
         if (vkCode == SkkKeyConstants.VkBack)
         {
-            if (engine.RomajiBuffer.Length > 0)
+            if (context.RomajiBuffer.Length > 0)
             {
-                engine.RomajiBuffer.Remove(engine.RomajiBuffer.Length - 1, 1);
+                context.RomajiBuffer.Remove(context.RomajiBuffer.Length - 1, 1);
                 context.NotifyBufferChanged();
                 return true;
             }
-            if (engine.CompositionBuffer.Length > 0)
+            if (context.CompositionBuffer.Length > 0)
             {
-                engine.CompositionBuffer.Remove(engine.CompositionBuffer.Length - 1, 1);
-                if (engine.CompositionBuffer.Length == 0)
+                context.CompositionBuffer.Remove(context.CompositionBuffer.Length - 1, 1);
+                if (context.CompositionBuffer.Length == 0)
                 {
                     context.IsConversionMode = false;
                     context.IsAbbreviationMode = false;
                     context.OkuriPrefix = null;
                 }
-                else if (context.OkuriPrefix != null && engine.CompositionBuffer.Length < context.ReadingBeforeOkuri.Length)
+                else if (context.OkuriPrefix != null && context.CompositionBuffer.Length < context.ReadingBeforeOkuri.Length)
                 {
                     context.OkuriPrefix = null;
                 }
@@ -120,7 +119,7 @@ public class IdleState : ISkkEditorState
         // Return
         if (vkCode == SkkKeyConstants.VkReturn && !shiftPressed)
         {
-            if (engine.CompositionBuffer.Length > 0 || engine.RomajiBuffer.Length > 0)
+            if (context.CompositionBuffer.Length > 0 || context.RomajiBuffer.Length > 0)
             {
                 engine.CommitAll();
                 return true;
@@ -131,7 +130,7 @@ public class IdleState : ISkkEditorState
         // Space
         if (vkCode == SkkKeyConstants.VkSpace && !shiftPressed)
         {
-            if ((context.IsConversionMode || context.IsAbbreviationMode) && (engine.CompositionBuffer.Length > 0 || engine.RomajiBuffer.Length > 0))
+            if ((context.IsConversionMode || context.IsAbbreviationMode) && (context.CompositionBuffer.Length > 0 || context.RomajiBuffer.Length > 0))
             {
                 engine.StartConversion();
                 context.NotifyBufferChanged();
@@ -152,7 +151,7 @@ public class IdleState : ISkkEditorState
 
             if (context.IsAbbreviationMode)
             {
-                engine.CompositionBuffer.Append(c);
+                context.CompositionBuffer.Append(c);
                 context.NotifyBufferChanged();
                 return true;
             }
@@ -161,7 +160,7 @@ public class IdleState : ISkkEditorState
             var canMatch = engine.kanaConverter.ToKana(c.ToString()) != string.Empty || engine.kanaConverter.IsPotentialPrefix(c.ToString());
             if (isSymbol && !canMatch)
             {
-                if (engine.CompositionBuffer.Length == 0 && engine.RomajiBuffer.Length == 0)
+                if (context.CompositionBuffer.Length == 0 && context.RomajiBuffer.Length == 0)
                 {
                     return false; // Let it pass through if no active composition
                 }
@@ -180,27 +179,27 @@ public class IdleState : ISkkEditorState
                         context.ReadingBeforeOkuri = "";
                         engine.ChangeState(engine.State);
                     }
-                    else if (context.OkuriPrefix == null && engine.CompositionBuffer.Length > 0)
+                    else if (context.OkuriPrefix == null && context.CompositionBuffer.Length > 0)
                     {
-                        if (engine.RomajiBuffer.Length == 1 && engine.RomajiBuffer[0] == 'n')
+                        if (context.RomajiBuffer.Length == 1 && context.RomajiBuffer[0] == 'n')
                         {
                             engine.HandleKanaProduced("ん");
-                            engine.RomajiBuffer.Clear();
+                            context.RomajiBuffer.Clear();
                         }
                         context.OkuriPrefix = char.ToLower(c, CultureInfo.CurrentCulture).ToString();
-                        context.ReadingBeforeOkuri = engine.CompositionBuffer.ToString();
+                        context.ReadingBeforeOkuri = context.CompositionBuffer.ToString();
                         engine.ChangeState(engine.State);
                     }
                 }
 
-                engine.RomajiBuffer.Append(char.ToLower(c, CultureInfo.CurrentCulture));
+                context.RomajiBuffer.Append(char.ToLower(c, CultureInfo.CurrentCulture));
                 engine.TryConvertRomaji();
                 context.NotifyBufferChanged();
                 return true;
             }
             else
             {
-                if (engine.CompositionBuffer.Length == 0 && engine.RomajiBuffer.Length == 0)
+                if (context.CompositionBuffer.Length == 0 && context.RomajiBuffer.Length == 0)
                 {
                     return false; // Let Space pass through if nothing to commit
                 }

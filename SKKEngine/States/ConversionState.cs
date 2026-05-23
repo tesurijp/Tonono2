@@ -1,8 +1,8 @@
 namespace Tonono2.SKKEngine.States;
 
-public class ConversionState : ISkkEditorState
+public static class ConversionState
 {
-    public bool ProcessKey(SkkEngine engine, SkkKeyCommand command)
+    public static bool ProcessKey(SkkEngine engine, SkkKeyCommand command)
     {
         var context = engine.Context;
         var vkCode = command.VkCode;
