@@ -2,26 +2,22 @@ namespace Tonono2.SKKEngine.States;
 
 public class ZenkakuState : StateBase
 {
-    public static bool ProcessKey(SkkEngine engine, SkkKeyCommand command)
+    public static SkkActionResult ProcessKey(SkkEngine engine, SkkKeyCommand command)
     {
         var vkCode = command.VkCode;
 
         if (IsNavigationKey(vkCode))
         {
-            return false;
+            return Passthrough;
         }
-
         if (command.Control && vkCode == SkkConstants.VkJ)
         {
-            return SwitchState(engine, SkkState.Hiragana);
+            return HandleSwitchState(engine, SkkState.Hiragana);
         }
-
         if (command.Ch is char cz && engine.zenkakuTable.TryGetValue(cz.ToString(), out var zenkaku))
         {
-            engine.CommitProducedText(zenkaku.ToString());
-            return true;
+            return Handled(() => engine.CommitProducedText(zenkaku.ToString()));
         }
-
-        return false;
+        return Passthrough;
     }
 }

@@ -2,50 +2,24 @@ namespace Tonono2.SKKEngine.States;
 
 public class RegistrationState : StateBase
 {
-    public static bool ProcessKey(SkkEngine engine, SkkKeyCommand command)
+    public static SkkActionResult ProcessKey(SkkEngine engine, SkkKeyCommand command)
     {
         var context = engine.Context;
         var vkCode = command.VkCode;
 
         if (IsNavigationKey(vkCode))
         {
-            return false;
+            return Passthrough;
         }
-
-        switch (vkCode, command.Control, command.Shift)
+        return (vkCode, command.Control, command.Shift) switch
         {
-            case (SkkConstants.VkEscape, _, _):
-            {
-                engine.CancelRegistration();
-                return true;
-            }
-            case (_, true, _):
-            {
-                if (vkCode == SkkConstants.VkJ)
-                {
-                    return CommitAll(engine);
-                }
-                if (vkCode == SkkConstants.VkG)
-                {
-                    engine.CancelRegistration();
-                    return true;
-                }
-                return false;
-            }
-            case (SkkConstants.VkReturn, false, false) when context.CompositionBuffer.Length == 0 && context.RomajiBuffer.Length == 0 && context.CandidateIndex == -1:
-            {
-                engine.FinishRegistration();
-                return true;
-            }
-            case (SkkConstants.VkBack, false, _) when context.RomajiBuffer.Length == 0 && context.CompositionBuffer.Length == 0:
-            {
-                engine.HandleRegistrationBackspace();
-                return true;
-            }
-        }
-
-        // Delegate most input to IdleState (for Romaji/Kana conversion)
-        // Since we are in RegistrationMode, CommitProducedText will append to the registrar.
-        return IdleState.ProcessKey(engine, command);
+            (SkkConstants.VkEscape, _, _) => Handled(engine.CancelRegistration),
+            (SkkConstants.VkJ, true, _) => HandleCommitAll(engine),
+            (SkkConstants.VkG, true, _) => Handled(engine.CancelRegistration),
+            (_, true, _) => Passthrough,
+            (SkkConstants.VkReturn, false, false) when !context.IsBufferActive && context.CandidateIndex == -1 => Handled(engine.FinishRegistration),
+            (SkkConstants.VkBack, false, _) when !context.IsBufferActive => Handled(engine.HandleRegistrationBackspace),
+            _ => IdleState.ProcessKey(engine, command)
+        };
     }
 }

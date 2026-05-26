@@ -2,34 +2,14 @@ namespace Tonono2.SKKEngine.States;
 
 public class ConversionState : StateBase
 {
-    public static bool ProcessKey(SkkEngine engine, SkkKeyCommand command)
+    public static SkkActionResult ProcessKey(SkkEngine engine, SkkKeyCommand command)
     {
         var context = engine.Context;
         var vkCode = command.VkCode;
 
         if (IsNavigationKey(vkCode))
         {
-            return false;
-        }
-
-        switch (vkCode, command.Control, command.Shift)
-        {
-            case (SkkConstants.VkEscape, _, _):
-                {
-                    return CancelComposition(engine,context);
-                }
-            case (_, true, _):
-                {
-                    return vkCode switch
-                    {
-                        SkkConstants.VkJ => CommitAll(engine),
-                        SkkConstants.VkG => CancelComposition(engine,context),
-                        SkkConstants.VkN => NextCandidate(engine, context),
-                        SkkConstants.VkP => BackCandidate(engine, context),
-                        SkkConstants.VkX when context.CandidateIndex >= 0 && context.CandidateIndex < context.Candidates.Count => RemoveWord(engine, context),
-                        _ => false
-                    };
-                }
+            return Passthrough;
         }
 
         if (context.ListConversion)
@@ -37,32 +17,38 @@ public class ConversionState : StateBase
             int targetIdx = GetSelectionIndex(context, vkCode);
             if (targetIdx >= 0 && targetIdx < context.Candidates.Count)
             {
-                return SelectCandidateDirectly(engine, context, targetIdx);
+                return HandleSelectCandidateDirectly(engine, context, targetIdx);
             }
         }
-
-        return (vkCode, command.Shift) switch
+        return (vkCode, command.Control, command.Shift) switch
         {
-            (SkkConstants.VkSpace, false) => NextPage(engine, context),
-            (SkkConstants.VkBack, _) => CancelComposition(engine, context),
-            (SkkConstants.VkReturn, _) or (SkkConstants.VkQ, _) => CommitAll(engine),
-            _ when command.Ch is { } c => char.IsControl(c) ? CommitAll(engine, false) : CommitAndProcessKeyInNextState(engine, vkCode),
-            _ => false
+            (SkkConstants.VkEscape, _, _) => HandleCancelComposition(engine, context),
+            (SkkConstants.VkJ, true, _) => HandleCommitAll(engine),
+            (SkkConstants.VkG, true, _) => HandleCancelComposition(engine, context),
+            (SkkConstants.VkN, true, _) => HandleNextCandidate(engine, context),
+            (SkkConstants.VkP, true, _) => HandleBackCandidate(engine, context),
+            (SkkConstants.VkX, true, _) when context.CandidateIndex >= 0 && context.CandidateIndex < context.Candidates.Count => HandleRemoveWord(engine, context),
+            (_, true, _) => Passthrough,
+            (SkkConstants.VkSpace, _, false) => HandleNextPage(engine, context),
+            (SkkConstants.VkBack, _, _) => HandleCancelComposition(engine, context),
+            (SkkConstants.VkReturn, _, _) => HandleCommitAll(engine),
+            (SkkConstants.VkQ, _, _) => HandleCommitAll(engine),
+            _ when command.Ch is { } c => char.IsControl(c) ? Pass(engine.CommitAll) : HandleCommitAndProcessKeyInNextState(engine, vkCode),
+            _ => Passthrough
         };
     }
 
-    private static bool CommitAndProcessKeyInNextState(SkkEngine engine, int vkCode)
+    private static SkkActionResult HandleCommitAndProcessKeyInNextState(SkkEngine engine, int vkCode) => Handled(() =>
     {
-        CommitAll(engine);
-        return engine.ProcessKey(vkCode, true);
-    }
+        engine.CommitAll();
+        engine.ProcessKey(vkCode, true);
+    });
 
-    private static bool CancelComposition(SkkEngine engine, SkkContext context)
+    private static SkkActionResult HandleCancelComposition(SkkEngine engine, SkkContext context) => Handled(() =>
     {
         context.CandidateIndex = -1;
         engine.ChangeState(engine.State);
-        return true;
-    }
+    });
 
     private static int GetSelectionIndex(SkkContext context, int vkCode)
     {
@@ -83,13 +69,13 @@ public class ConversionState : StateBase
         return targetIdx;
     }
 
-    private static bool SelectCandidateDirectly(SkkEngine engine, SkkContext context, int targetIdx)
+    private static SkkActionResult HandleSelectCandidateDirectly(SkkEngine engine, SkkContext context, int targetIdx) => Handled(() =>
     {
         context.CandidateIndex = targetIdx;
-        return CommitAll(engine);
-    }
+        engine.CommitAll();
+    });
 
-    private static bool RemoveWord(SkkEngine engine, SkkContext context)
+    private static SkkActionResult HandleRemoveWord(SkkEngine engine, SkkContext context) => Handled(() =>
     {
         var word = context.Candidates[context.CandidateIndex];
         engine.Dictionary.RemoveWord(engine.GetDictionaryKey(), word);
@@ -103,10 +89,9 @@ public class ConversionState : StateBase
         {
             context.CandidateIndex %= context.Candidates.Count;
         }
-        return true;
-    }
+    });
 
-    private static bool NextCandidate(SkkEngine engine, SkkContext context, int? newindex = null)
+    private static SkkActionResult HandleNextCandidate(SkkEngine engine, SkkContext context, int? newindex = null) => Handled(() =>
     {
         context.CandidateIndex = newindex ?? context.CandidateIndex + 1;
 
@@ -114,26 +99,30 @@ public class ConversionState : StateBase
         {
             engine.StartRegistration(engine.GetDictionaryKey());
         }
-        return true;
-    }
+    });
 
-    private static bool NextPage(SkkEngine engine, SkkContext context)
+    private static SkkActionResult HandleNextPage(SkkEngine engine, SkkContext context) => Handled(() =>
     {
         int? idx = null;
         if (context.ListConversion)
         {
             idx = context.PageStart + SkkContext.ListPageSize;
         }
-        return NextCandidate(engine, context, idx);
-    }
 
-    private static bool BackCandidate(SkkEngine engine, SkkContext context)
+        context.CandidateIndex = idx ?? context.CandidateIndex + 1;
+
+        if (context.CandidateIndex >= context.Candidates.Count)
+        {
+            engine.StartRegistration(engine.GetDictionaryKey());
+        }
+    });
+
+    private static SkkActionResult HandleBackCandidate(SkkEngine engine, SkkContext context) => Handled(() =>
     {
         context.CandidateIndex--;
         if (context.CandidateIndex < 0)
         {
             engine.ChangeState(engine.State);
         }
-        return true;
-    }
+    });
 }

@@ -1,75 +1,51 @@
+using System;
 using System.Globalization;
+using System.Windows;
 
 namespace Tonono2.SKKEngine.States;
 
+public record SkkActionResult(bool IsHandled, Action? Action = null)
+{
+    public SkkActionResult AppendPreAction(Action action) =>
+        Action is not null ?
+         new(IsHandled, () => { 
+             action(); 
+             Action(); 
+         }) :
+         new(IsHandled, action);
+
+    public void Invoke(SkkEngine engine)
+    {
+        if (Action is not null)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                Action();
+                engine.Context.NotifyBufferChanged();
+            });
+        }
+    }
+}
+
 public abstract class StateBase
 {
-    protected static (SkkContext context, int vkCode, bool? result) PrepareProcessing(SkkEngine engine, SkkKeyCommand command) => 
-        (engine.Context, command.VkCode, IsNavigationKey(command.VkCode) ? false : null);
+    protected static readonly SkkActionResult Passthrough = new(false, null);
+    protected static readonly SkkActionResult HandledOnly = new(true, null);
+    protected static SkkActionResult Handled(Action? action) => new(true, action);
+    protected static SkkActionResult Pass(Action? action) => new(false, action);
 
+    protected static SkkActionResult HandleQKey(SkkEngine engine, SkkContext context) =>
+        context.IsBufferActive ? Handled(engine.FlipAndCommit) : Handled(engine.ToggleHiraganaKatakana);
 
-    protected static bool ResetBuffers(SkkEngine engine)
-    {
-        engine.ResetBuffers();
-        return true;
-    }
+    protected static SkkActionResult HandleCommitAll(SkkEngine engine) => Handled(engine.CommitAll);
 
-    protected static bool CommitAll(SkkEngine engine, bool result = true)
-    {
-        engine.CommitAll();
-        return result;
-    }
-
-    protected static bool HandleRomaji(SkkEngine engine, SkkContext context, char c)
-    {
-        context.RomajiBuffer.Append(char.ToLower(c, CultureInfo.CurrentCulture));
-        engine.TryConvertRomaji();
-        return true;
-    }
-
-    protected static bool BackspaceRomaji(SkkContext context)
-    {
-        if (context.RomajiBuffer.Length > 0)
-        {
-            context.RomajiBuffer.Remove(context.RomajiBuffer.Length - 1, 1);
-            return true;
-        }
-        return false;
-    }
-
-    protected static bool HandleQKey(SkkEngine engine, SkkContext context)
-    {
-        if (context.CompositionBuffer.Length > 0 || context.RomajiBuffer.Length > 0)
-        {
-            engine.FlipAndCommit();
-        }
-        else
-        {
-            engine.ToggleHiraganaKatakana();
-        }
-        return true;
-    }
-
-    protected static bool EnterAbbreviationMode(SkkEngine engine, SkkContext context)
+    protected static SkkActionResult HandleEnterAbbreviationMode(SkkEngine engine, SkkContext context) => Handled(() =>
     {
         context.IsAbbreviationMode = true;
         engine.ChangeState(engine.State);
-        return true;
-    }
+    });
 
-    protected static bool StartConversion(SkkEngine engine)
-    {
-        engine.StartConversion();
-        return true;
-    }
-
-    protected static bool AppendToComposition(SkkContext context, char c)
-    {
-        context.CompositionBuffer.Append(c);
-        return true;
-    }
-
-    protected static void HandleUpperCase(SkkEngine engine, SkkContext context, char c)
+    protected static void ActionUpperCase(SkkEngine engine, SkkContext context, char c)
     {
         if (!char.IsUpper(c) || !char.IsLetter(c))
         {
@@ -96,37 +72,43 @@ public abstract class StateBase
         }
     }
 
-    protected static bool BackspaceComposition(SkkEngine engine, SkkContext context)
+    protected static SkkActionResult HandleBackspace(SkkEngine engine, SkkContext context)
     {
+        if (context.RomajiBuffer.Length > 0)
+        {
+            return Handled(() => context.RomajiBuffer.Remove(context.RomajiBuffer.Length - 1, 1));
+        }
         if (context.CompositionBuffer.Length > 0)
         {
-            context.CompositionBuffer.Remove(context.CompositionBuffer.Length - 1, 1);
-            if (context.CompositionBuffer.Length == 0)
+            return Handled(() =>
             {
-                context.IsConversionMode = false;
-                context.IsAbbreviationMode = false;
-                context.OkuriPrefix = null;
-                engine.ChangeState(engine.State);
-            }
-            else if (context.OkuriPrefix != null && context.CompositionBuffer.Length < context.ReadingBeforeOkuri.Length)
-            {
-                context.OkuriPrefix = null;
-            }
-            return true;
+                context.CompositionBuffer.Remove(context.CompositionBuffer.Length - 1, 1);
+                if (context.CompositionBuffer.Length == 0)
+                {
+                    context.IsConversionMode = false;
+                    context.IsAbbreviationMode = false;
+                    context.OkuriPrefix = null;
+                    engine.ChangeState(engine.State);
+                }
+                else if (context.OkuriPrefix != null && context.CompositionBuffer.Length < context.ReadingBeforeOkuri.Length)
+                {
+                    context.OkuriPrefix = null;
+                }
+            });
         }
-        return false;
+        return Passthrough;
     }
 
-    protected static bool HandleCharInput(SkkEngine engine, SkkContext context, char c)
+    protected static SkkActionResult HandleCharInput(SkkEngine engine, SkkContext context, char c)
     {
         if (char.IsControl(c))
         {
-            return false;
+            return Passthrough;
         }
 
         if (context.IsAbbreviationMode)
         {
-            return AppendToComposition(context, c);
+            return Handled(() => context.CompositionBuffer.Append(c));
         }
 
         var isSymbol = !char.IsLetter(c) && !char.IsDigit(c);
@@ -135,62 +117,43 @@ public abstract class StateBase
         {
             if (context.CompositionBuffer.Length == 0 && context.RomajiBuffer.Length == 0)
             {
-                return false;
+                return Passthrough;
             }
-            return CommitAll(engine, false);
+            return Pass(engine.CommitAll);
         }
 
         if (c != ' ')
         {
-            HandleUpperCase(engine, context, c);
-            return HandleRomaji(engine, context, c);
+            return Handled(() =>
+            {
+                ActionUpperCase(engine, context, c);
+                context.RomajiBuffer.Append(char.ToLower(c, CultureInfo.CurrentCulture));
+                engine.TryConvertRomaji();
+            });
         }
         else
         {
             if (context.CompositionBuffer.Length == 0 && context.RomajiBuffer.Length == 0)
             {
-                return false;
+                return Passthrough;
             }
-            return CommitAll(engine, false);
+            return Pass(engine.CommitAll);
         }
     }
 
-    protected static bool IsNavigationKey(int vkCode)
-    {
-        return vkCode >= 0x21 && vkCode <= 0x28;
-    }
+    protected static bool IsNavigationKey(int vkCode) => vkCode >= 0x21 && vkCode <= 0x28;
 
-    protected static bool SwitchState(SkkEngine engine, SkkState newState)
+    protected static SkkActionResult HandleSwitchState(SkkEngine engine, SkkState newState) => Handled(() =>
     {
         engine.CommitAll();
         engine.ChangeState(newState);
-        return true;
-    }
+    });
 
-    protected static bool TryResetBuffers(SkkEngine engine, SkkContext context)
-    {
-        if (context.CompositionBuffer.Length > 0 || context.RomajiBuffer.Length > 0 || context.IsConversionMode)
-        {
-            return ResetBuffers(engine);
-        }
-        return false;
-    }
+    protected static SkkActionResult HandleTryResetBuffers(SkkEngine engine, SkkContext context) =>
+        context.IsBufferActive || context.IsConversionMode ? Handled(engine.ResetBuffers) : Passthrough;
 
-    protected static bool IsBufferActive(SkkContext context)
-    {
-        return context.CompositionBuffer.Length > 0 || context.RomajiBuffer.Length > 0;
-    }
-
-    protected static bool HandleCommonCtrlKeys(SkkEngine engine, SkkContext context, int vkCode)
-    {
-        if (vkCode == SkkConstants.VkJ)
-        {
-            return CommitAll(engine);
-        }
-        if (vkCode == SkkConstants.VkG)
-        {
-            return TryResetBuffers(engine, context);
-        }
-        return false;
-    }
+    protected static SkkActionResult HandleCommonCtrlKeys(SkkEngine engine, SkkContext context, int vkCode) =>
+        vkCode == SkkConstants.VkJ ? HandleCommitAll(engine) :
+        vkCode == SkkConstants.VkG ? HandleTryResetBuffers(engine, context) :
+        Passthrough;
 }

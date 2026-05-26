@@ -8,7 +8,7 @@ namespace Tonono2.SKKEngine;
 
 public class SkkContext : INotifyPropertyChanged
 {
-    public Func<SkkEngine, SkkKeyCommand, bool> ProcessKey { get; set; } = DisabledState.ProcessKey;
+    public Func<SkkEngine, SkkKeyCommand, SkkActionResult> ProcessKey { get; set; } = DisabledState.ProcessKey;
     public StringBuilder RomajiBuffer { get; } = new();
     public StringBuilder CompositionBuffer { get; } = new();
     public SkkState State { get; set; } = SkkState.Disabled;
@@ -95,7 +95,8 @@ public class SkkContext : INotifyPropertyChanged
         }
         return "";
     }
-    public bool IsVisible => IsInRegistrationMode || CompositionBuffer.Length > 0 || RomajiBuffer.Length > 0;
+    public bool IsBufferActive => CompositionBuffer.Length > 0 || RomajiBuffer.Length > 0;
+    public bool IsVisible => IsInRegistrationMode || IsBufferActive;
 
     internal void ResetBuffers()
     {

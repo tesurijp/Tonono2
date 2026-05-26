@@ -3,55 +3,35 @@ using System.Globalization;
 namespace Tonono2.SKKEngine.States;
 public class CompositionState : StateBase
 {
-    public static bool ProcessKey(SkkEngine engine, SkkKeyCommand command)
+    public static SkkActionResult ProcessKey(SkkEngine engine, SkkKeyCommand command)
     {
         var context = engine.Context;
         var vkCode = command.VkCode;
 
         if (IsNavigationKey(vkCode))
         {
-            return false;
+            return Passthrough;
         }
 
-        switch (vkCode, command.Control, command.Shift)
-        {
-            case (SkkConstants.VkEscape, _, _):
-            {
-                return ResetBuffers(engine);
-            }
-            case (_, true, _):
-            {
-                return HandleCommonCtrlKeys(engine, context, vkCode);
-            }
-            case (SkkConstants.VkQ, false, _):
-            {
-                return HandleQKey(engine, context);
-            }
-            case (SkkConstants.VkSlash, false, false) when !context.IsConversionMode && !context.IsAbbreviationMode && context.CompositionBuffer.Length == 0:
-            {
-                return EnterAbbreviationMode(engine, context);
-            }
-            case (SkkConstants.VkTab, false, false) when context.CandidateIndex == -1:
-            {
-                return HandleTabCompletion(engine, context);
-            }
-        }
+        var clearCompletion = context.CompletionIndex >= 0 && vkCode != SkkConstants.VkTab && vkCode != SkkConstants.VkSpace;
 
-        if (context.CompletionIndex >= 0 && vkCode != SkkConstants.VkTab && vkCode != SkkConstants.VkSpace)
+        var result = (vkCode, command.Control, command.Shift) switch
         {
-            ClearCompletion(context);
-        }
-
-        return (vkCode, command.Shift) switch
-        {
-            (SkkConstants.VkSpace, false) when context.CompletionIndex >= 0 => AcceptCompletionAndStartConversion(engine, context),
-            (SkkConstants.VkSpace, false) when IsBufferActive(context) => StartConversion(engine),
-            (SkkConstants.VkBack, _) => BackspaceRomaji(context) || BackspaceComposition(engine, context),
-            _ => command.Ch.HasValue && HandleCharInput(engine, context, command.Ch.Value)
+            (SkkConstants.VkEscape, _, _) => Handled(engine.ResetBuffers),
+            (_, true, _) => HandleCommonCtrlKeys(engine, context, vkCode),
+            (SkkConstants.VkQ, _, _) => HandleQKey(engine, context),
+            (SkkConstants.VkSlash, _, false) when !context.IsConversionMode && !context.IsAbbreviationMode && context.CompositionBuffer.Length == 0 => HandleEnterAbbreviationMode(engine, context),
+            (SkkConstants.VkReturn, _, _) => HandleCommitAll(engine),
+            (SkkConstants.VkTab, _, false) when context.CandidateIndex == -1 => HandleTabCompletion(engine, context),
+            (SkkConstants.VkSpace, _, false) when context.CompletionIndex >= 0 => HandleAcceptCompletionAndStartConversion(engine, context),
+            (SkkConstants.VkSpace, _, false) when context.IsBufferActive => Handled(engine.StartConversion),
+            (SkkConstants.VkBack, _, _) => HandleBackspace(engine, context),
+            _ => command.Ch.HasValue ? HandleCharInput(engine, context, command.Ch.Value) : Passthrough,
         };
+        return clearCompletion ? result.AppendPreAction(() => ClearCompletion(context)) : result;
     }
 
-    private static bool HandleTabCompletion(SkkEngine engine, SkkContext context)
+    private static SkkActionResult HandleTabCompletion(SkkEngine engine, SkkContext context) => Handled(() =>
     {
         if (context.CompletionIndex == -1)
         {
@@ -66,9 +46,7 @@ public class CompositionState : StateBase
         {
             context.CompletionIndex = (context.CompletionIndex + 1) % context.Completions.Count;
         }
-
-        return true;
-    }
+    });
 
     private static void ClearCompletion(SkkContext context)
     {
@@ -76,12 +54,12 @@ public class CompositionState : StateBase
         context.Completions.Clear();
     }
 
-    private static bool AcceptCompletionAndStartConversion(SkkEngine engine, SkkContext context)
+    private static SkkActionResult HandleAcceptCompletionAndStartConversion(SkkEngine engine, SkkContext context) => Handled(() =>
     {
         context.CompositionBuffer.Clear();
         context.CompositionBuffer.Append(context.Completions[context.CompletionIndex]);
         context.CompletionIndex = -1;
         context.Completions.Clear();
-        return StartConversion(engine);
-    }
+        engine.StartConversion();
+    });
 }

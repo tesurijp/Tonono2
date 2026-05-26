@@ -2,13 +2,17 @@ namespace Tonono2.SKKEngine.States;
 
 public class DisabledState : StateBase
 {
-    public static bool ProcessKey(SkkEngine engine, SkkKeyCommand command)
+    public static SkkActionResult ProcessKey(SkkEngine engine, SkkKeyCommand command)
     {
         if (command.Control && command.VkCode == SkkConstants.VkJ)
         {
-            engine.ResetBuffers();
-            return SwitchState(engine, SkkState.Hiragana);
+            return Handled(() =>
+            {
+                engine.ResetBuffers();
+                engine.CommitAll();
+                engine.ChangeState(SkkState.Hiragana);
+            });
         }
-        return false;
+        return Passthrough;
     }
 }

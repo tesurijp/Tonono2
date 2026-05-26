@@ -91,8 +91,6 @@ public static class ConfigLoader
         }
     }
 
-    private static void LoadViCompatibleApps(ConfigYaml data, AppConfig appConfig)
-    {
-        appConfig.ViCompatibleApps = [.. data.ViCompatibleApps];
-    }
+    private static void LoadViCompatibleApps(ConfigYaml data, AppConfig appConfig) =>
+        appConfig.ViCompatibleApps = [.. data.ViCompatibleApps.Select(i => i.Replace('/', '\\'))];
 }

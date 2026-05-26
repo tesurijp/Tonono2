@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using Tonono2.Win32;
 
@@ -76,26 +77,14 @@ public sealed class SkkController : IDisposable
         {
             e.Handled = true;
         }
-        Engine.Context. NotifyBufferChanged();
+        Engine.Context.NotifyBufferChanged();
     }
 
     private bool IsViCompatibleAppActive()
     {
-        var activePath = ActiveProcess.GetActiveProcessPath();
+        var activePath = ActiveProcess.GetActiveProcessPath()?.Replace('/', '\\');
         if (string.IsNullOrEmpty(activePath)) return false;
-
-        // Normalize path separators to backslashes for consistency
-        var normalizedActivePath = activePath.Replace('/', '\\');
-
-        foreach (var app in Config.ViCompatibleApps)
-        {
-            var normalizedApp = app.Replace('/', '\\');
-            if (normalizedActivePath.EndsWith(normalizedApp, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-        return false;
+        return Config.ViCompatibleApps.Any(i => activePath.EndsWith(i, StringComparison.OrdinalIgnoreCase));
     }
     public void Dispose()
     {

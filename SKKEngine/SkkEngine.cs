@@ -48,7 +48,9 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
         var ch = Keyboard.VkToChar(vkCode, shiftPressed);
         var command = new SkkKeyCommand(vkCode, shiftPressed, ctrlPressed, ch == '\0' ? null : ch);
 
-        return Context.ProcessKey(this, command);
+        var result = Context.ProcessKey(this, command);
+        result.Invoke(this);
+        return result.IsHandled;
     }
 
     internal void StartRegistration(string reading)
