@@ -85,7 +85,7 @@ public abstract class StateBase
         }
         else if (context.OkuriPrefix == null && context.CompositionBuffer.Length > 0)
         {
-            if (context.RomajiBuffer.Length == 1 && context.RomajiBuffer.First == 'n')
+            if (context.RomajiBuffer.Length == 1 && context.RomajiBuffer[0] == 'n')
             {
                 engine.HandleKanaProduced("ん");
                 context.RomajiBuffer.Clear();

@@ -76,6 +76,7 @@ public sealed class SkkController : IDisposable
         {
             e.Handled = true;
         }
+        Engine.Context. NotifyBufferChanged();
     }
 
     private bool IsViCompatibleAppActive()

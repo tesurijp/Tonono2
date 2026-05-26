@@ -185,8 +185,8 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
             }
             else
             {
-                DebugLogger.Log($"No match in romaji table for: {Context.RomajiBuffer}. Flushing: {Context.RomajiBuffer.First}");
-                HandleKanaProduced(Context.RomajiBuffer.First.ToString());
+                DebugLogger.Log($"No match in romaji table for: {Context.RomajiBuffer}. Flushing: {Context.RomajiBuffer[0]}");
+                HandleKanaProduced(Context.RomajiBuffer[0].ToString());
                 Context.RomajiBuffer.Remove(0, 1);
             }
         }

@@ -1,210 +1,101 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Text;
 using Tonono2.SKKEngine.States;
 
 namespace Tonono2.SKKEngine;
 
-public class CompositionBuffer(Action NotifyChanged)
-{
-    private readonly StringBuilder buffer = new();
-    private CompositionBuffer WrapAction(Action action)
-    {
-        action();
-        NotifyChanged();
-        return this;
-    }
-    public CompositionBuffer Clear() => WrapAction(() => buffer.Clear());
-    public CompositionBuffer Append(string st) => WrapAction(() => buffer.Append(st));
-    public CompositionBuffer Append(char ch) => WrapAction(() => buffer.Append(ch));
-    public CompositionBuffer Remove(int start, int length) => WrapAction(() => buffer.Remove(start, length));
-    public override string ToString() => buffer.ToString();
-    public int Length => buffer.Length;
-    public char First => buffer[0];
-}
-
 public class SkkContext : INotifyPropertyChanged
 {
     public Func<SkkEngine, SkkKeyCommand, bool> ProcessKey { get; set; } = DisabledState.ProcessKey;
-    public SkkContext()
-    {
-        RomajiBuffer  = new(NotifyBufferChanged);
-        CompositionBuffer  = new(NotifyBufferChanged);
-        NotifyBufferChanged();
-    }
-
-    public CompositionBuffer RomajiBuffer { get; }
-    public CompositionBuffer CompositionBuffer { get; }
-
-
-    private void SetProperty<T>(ref T current, T newvalue, params IEnumerable<string> names)
-    {
-        if (current is null || (!current.Equals(newvalue)))
-        {
-            current = newvalue;
-            foreach (var name in names)
-            {
-                OnPropertyChanged(name);
-            }
-        }
-    }
-
-    public SkkState State
-    {
-        get => field;
-        set => SetProperty(ref field, value, nameof(StatusText), nameof(IsVisible));
-    } = SkkState.Disabled;
-
-
-    public bool IsConversionMode
-    {
-        get => field;
-        set => SetProperty(ref field, value, nameof(Composition), nameof(IsVisible));
-    }
-
-    public bool IsAbbreviationMode
-    {
-        get => field;
-        set => SetProperty(ref field, value, nameof(Composition));
-    }
-
-    public string? OkuriPrefix
-    {
-        get => field;
-        set => SetProperty(ref field, value, nameof(Composition));
-    }
-
-    public string ReadingBeforeOkuri
-    {
-        get => field;
-        set => SetProperty(ref field, value, nameof(Composition));
-    } = "";
-
-    public List<string> Candidates
-    {
-        get => field;
-        set => SetProperty(ref field, value, nameof(Composition), nameof(CandidateList));
-    } = [];
-
-    public int CandidateIndex
-    {
-        get => field;
-        set => SetProperty(ref field, value, nameof(Composition), nameof(CandidateList));
-    } = -1;
-
-    public List<string> Completions
-    {
-        get => field;
-        set => SetProperty(ref field, value, nameof(Composition));
-    } = [];
-
-    public int CompletionIndex
-    {
-        get => field;
-        set => SetProperty(ref field, value, nameof(Composition));
-    } = -1;
-
+    public StringBuilder RomajiBuffer { get; } = new();
+    public StringBuilder CompositionBuffer { get; } = new();
+    public SkkState State { get; set; } = SkkState.Disabled;
+    public bool IsConversionMode { get; set; }
+    public bool IsAbbreviationMode { get; set; }
+    public string? OkuriPrefix { get; set; }
+    public string ReadingBeforeOkuri { get; set; } = "";
+    public List<string> Candidates { get; set; } = [];
+    public int CandidateIndex { get; set; } = 1;
+    public List<string> Completions { get; set; } = [];
+    public int CompletionIndex { get; set; } = -1;
     public string OriginalReadingBeforeCompletion { get; set; } = "";
-
-    public int RecursionDepth
-    {
-        get => field;
-        set => SetProperty(ref field, value, nameof(StatusText));
-    }
-
-    public bool IsInRegistrationMode
-    {
-        get => field;
-        set => SetProperty(ref field, value, nameof(IsVisible), nameof(IsInRegistrationMode));
-    }
-
-    public string RegistrationReading
-    {
-        get => field;
-        set => SetProperty(ref field, value, nameof(RegistrationReading));
-    } = "";
-
-    public string RegistrationWord
-    {
-        get => field;
-        set => SetProperty(ref field, value, nameof(RegistrationWord));
-    } = "";
-
-
-    public string StatusText => $"[{GetStateDisplay()}]{(RecursionDepth > 0 ? $":{RecursionDepth}" : "")}";
-
-    public string Composition
-    {
-        get
-        {
-            if (CandidateIndex >= 0 && CandidateIndex < Candidates.Count)
-            {
-                var sb = new StringBuilder();
-                sb.Append(SkkConstants.ConvertPrefix);
-                if (CandidateIndex < 4) sb.Append(Candidates[CandidateIndex]);
-                if (OkuriPrefix != null)
-                {
-                    var bufferStr = CompositionBuffer.ToString();
-                    var start = Math.Min(ReadingBeforeOkuri.Length, bufferStr.Length);
-                    var okuriDisplay = string.Concat(bufferStr.AsSpan(start), RomajiBuffer.ToString());
-                    sb.Append('[');
-                    sb.Append(okuriDisplay);
-                    sb.Append(']');
-                }
-                return sb.ToString();
-            }
-
-            if (CompletionIndex >= 0 && CompletionIndex < Completions.Count)
-            {
-                return $"{SkkConstants.CompositionPrefix}{Completions[CompletionIndex]}{RomajiBuffer}";
-            }
-            return $"{SkkConstants.CompositionPrefix}{CompositionBuffer}{RomajiBuffer}";
-        }
-    }
-
+    public int RecursionDepth { get; set; }
+    public bool IsInRegistrationMode { get; set; }
+    public string RegistrationReading { get; set; } = "";
+    public string RegistrationWord { get; set; } = "";
+    public string StatusText { get; set; } = "";
+    public string Composition { get; set; } = "";
+    public string CandidateList { get; set; } = "";
     public bool ListConversion => CandidateIndex >= 4;
     public static int ListPageSize => 7;
-
     public int PageStart => (CandidateIndex / ListPageSize) * ListPageSize;
 
-    public string CandidateList
+    private string MakeStatusText()
     {
-        get
+        var sb = new StringBuilder();
+        sb.Append('[', RecursionDepth + 1);
+        var state = State switch
         {
-            if (ListConversion)
-            {
-                var sb = new StringBuilder();
-                var pageStart = (CandidateIndex / ListPageSize) * ListPageSize ;
-                for (var i = 0; i < ListPageSize; i++)
-                {
-                    var idx = pageStart + i;
-                    if (idx >= Candidates.Count)
-                    {
-                        break;
-                    }
-                    var labels = "ASDFJKL";
-                    var mark = (idx == CandidateIndex) ? $"[{labels[i]}] : " : $" {labels[i]}  : ";
-                    sb.Append(mark);
-                    sb.Append(Candidates[idx]);
-                    sb.Append(' ');
-                }
-                return sb.ToString();
-            }
-            return string.Empty;
-        }
+            SkkState.Hiragana => "あ",
+            SkkState.Katakana => "ア",
+            SkkState.Zenkaku => "全",
+            _ => "？"
+        };
+        sb.Append(state);
+        sb.Append(']', RecursionDepth + 1);
+        return sb.ToString();
     }
-
-    public bool IsVisible => IsInRegistrationMode || CompositionBuffer.Length > 0 || RomajiBuffer.Length > 0;
-
-    private string GetStateDisplay() => State switch
+    private string MakeComposition()
     {
-        SkkState.Hiragana => "あ",
-        SkkState.Katakana => "ア",
-        SkkState.Zenkaku => "全",
-        _ => "？"
-    };
+        if (CandidateIndex >= 0 && CandidateIndex < Candidates.Count)
+        {
+            var sb = new StringBuilder();
+            sb.Append(SkkConstants.ConvertPrefix);
+            if (CandidateIndex < 4) sb.Append(Candidates[CandidateIndex]);
+            if (OkuriPrefix != null)
+            {
+                var bufferStr = CompositionBuffer.ToString();
+                var start = Math.Min(ReadingBeforeOkuri.Length, bufferStr.Length);
+                var okuriDisplay = string.Concat(bufferStr.AsSpan(start), RomajiBuffer.ToString());
+                sb.Append('[');
+                sb.Append(okuriDisplay);
+                sb.Append(']');
+            }
+            return sb.ToString();
+        }
+
+        if (CompletionIndex >= 0 && CompletionIndex < Completions.Count)
+        {
+            return $"{SkkConstants.CompositionPrefix}{Completions[CompletionIndex]}{RomajiBuffer}";
+        }
+        return $"{SkkConstants.CompositionPrefix}{CompositionBuffer}{RomajiBuffer}";
+    }
+    private string MakeCandidateList()
+    {
+        if (ListConversion)
+        {
+            var sb = new StringBuilder();
+            var pageStart = (CandidateIndex / ListPageSize) * ListPageSize;
+            for (var i = 0; i < ListPageSize; i++)
+            {
+                var idx = pageStart + i;
+                if (idx >= Candidates.Count)
+                {
+                    break;
+                }
+                var labels = "ASDFJKL";
+                var mark = (idx == CandidateIndex) ? $"[{labels[i]}] : " : $" {labels[i]}  : ";
+                sb.Append(mark);
+                sb.Append(Candidates[idx]);
+                sb.Append(' ');
+            }
+            return sb.ToString();
+        }
+        return "";
+    }
+    public bool IsVisible => IsInRegistrationMode || CompositionBuffer.Length > 0 || RomajiBuffer.Length > 0;
 
     internal void ResetBuffers()
     {
@@ -219,13 +110,21 @@ public class SkkContext : INotifyPropertyChanged
         CompositionBuffer.Clear();
         RomajiBuffer.Clear();
     }
-
-    public void NotifyBufferChanged()
+    internal void NotifyBufferChanged()
     {
-        OnPropertyChanged(nameof(IsVisible));
-        OnPropertyChanged(nameof(Composition));
+        Composition = MakeComposition();
+        CandidateList = MakeCandidateList();
+        StatusText = MakeStatusText();
+        OnPropertyChanged2(nameof(StatusText));
+        OnPropertyChanged2(nameof(RegistrationReading));
+        OnPropertyChanged2(nameof(RegistrationWord));
+        OnPropertyChanged2(nameof(Composition));
+        OnPropertyChanged2(nameof(CandidateList));
+        OnPropertyChanged2(nameof(IsInRegistrationMode));
+        OnPropertyChanged2(nameof(IsVisible));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
-    protected virtual void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    protected virtual void OnPropertyChanged2(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    protected virtual void OnPropertyChanged(string propertyName) { }
 }
