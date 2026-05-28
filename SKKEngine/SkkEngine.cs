@@ -113,9 +113,9 @@ public class SkkEngine(AppConfig config, SkkDicManager dictionary)
 
     internal void StartConversion()
     {
-        if (Context.RomajiBuffer.ToString() == "n")
+        if (kanaConverter.ToFinish(Context.RomajiBuffer, out var fin))
         {
-            HandleKanaProduced("ん");
+            HandleKanaProduced(fin!);
             Context.RomajiBuffer.Clear();
         }
         var key = GetDictionaryKey();
@@ -132,13 +132,12 @@ public class SkkEngine(AppConfig config, SkkDicManager dictionary)
         }
     }
 
-    internal string GetDictionaryKey() => Context.OkuriPrefix != null ? Context.ReadingBeforeOkuri + Context.OkuriPrefix : Context.CompositionBuffer.ToString();
+    internal string GetDictionaryKey() => Context.OkuriPrefix != null ? Context.ReadingBeforeOkuri + Context.OkuriPrefix : Context.CompositionBuffer;
 
     internal void TryConvertRomaji()
     {
-
         var canstart = Context.IsConversionMode && Context.OkuriPrefix != null && Context.CandidateIndex == -1;
-        var (conversion, handleKana, newromaji) = kanaConverter.ToKanaConvert(Context.RomajiBuffer.ToString(), canstart);
+        var (conversion, handleKana, newromaji) = kanaConverter.ToKanaConvert(Context.RomajiBuffer, canstart);
 
         if (handleKana is not null)
         {
@@ -172,7 +171,7 @@ public class SkkEngine(AppConfig config, SkkDicManager dictionary)
 
     internal void FlipAndCommit()
     {
-        var text = Context.CompositionBuffer.ToString();
+        string text = Context.CompositionBuffer;
         if (Context.State == SkkState.Hiragana)
         {
             text = KanaConverter.HiraToKatakana(text);
@@ -213,16 +212,16 @@ public class SkkEngine(AppConfig config, SkkDicManager dictionary)
             Dictionary.AddWord(GetDictionaryKey(), committedText);
             if (Context.OkuriPrefix != null)
             {
-                var bufferStr = Context.CompositionBuffer.ToString();
+                string bufferStr = Context.CompositionBuffer;
                 var start = Math.Min(Context.ReadingBeforeOkuri.Length, bufferStr.Length);
                 var okuriKana = bufferStr[start..];
                 committedText += okuriKana;
-                committedText += Context.RomajiBuffer.ToString();
+                committedText += Context.RomajiBuffer;
             }
         }
         else
         {
-            committedText = Context.CompositionBuffer.ToString() + Context.RomajiBuffer.ToString();
+            committedText = Context.CompositionBuffer + Context.RomajiBuffer;
         }
 
         if (!string.IsNullOrEmpty(committedText))

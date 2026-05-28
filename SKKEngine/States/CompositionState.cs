@@ -35,7 +35,7 @@ public class CompositionState : StateBase
     {
         if (context.CompletionIndex == -1)
         {
-            context.OriginalReadingBeforeCompletion = context.CompositionBuffer.ToString();
+            context.OriginalReadingBeforeCompletion = context.CompositionBuffer;
             context.Completions = [.. engine.Dictionary.GetCompletions(context.OriginalReadingBeforeCompletion)];
             if (context.Completions.Count > 0)
             {

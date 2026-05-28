@@ -13,13 +13,14 @@ public class AppConfig
     public Dictionary<string, string> RomajiTable { get; } = [];
     public Dictionary<string, string> MoraModifier  { get; } = [];
     public Dictionary<string, string> ZenkakuTable { get; } = [];
+    public Dictionary<string, string> MoraAutoComplete { get; set; } = [];
     public List<string> DictionaryPaths { get; set; } = [];
     public string UserDictionaryPath { get; set; } = "";
     public List<string> ViCompatibleApps { get; set; } = [];
     public static string ConfigPath => Path.Combine(AppContext.BaseDirectory, "config.yaml");
 }
 
-[YamlObject] public partial record class RomajiTable(string Vowel, Dictionary<string, string[]> Rows, Dictionary<string, string> Irregular, Dictionary<string, List<string>> MoraModifier);
+[YamlObject] public partial record class RomajiTable(string Vowel, Dictionary<string, string[]> Rows, Dictionary<string, string> Irregular, Dictionary<string, List<string>> MoraModifier, Dictionary<string,string> MoraAutoComplete);
 [YamlObject] public partial record class Standard(int Start, int End, int Offset);
 [YamlObject] public partial record class ZenkakuTable(Standard Standard, Dictionary<string, string> Overrides);
 [YamlObject] public partial record class ConfigYaml(string[] DictionaryPaths, string UserDictionaryPath, RomajiTable RomajiTable, ZenkakuTable ZenkakuTable, string[] ViCompatibleApps);
@@ -99,6 +100,7 @@ public static class ConfigLoader
                 appConfig.MoraModifier[item] = ch;
             }
         }
+        appConfig.MoraAutoComplete = data.RomajiTable.MoraAutoComplete;
     }
 
     private static void LoadViCompatibleApps(ConfigYaml data, AppConfig appConfig) =>

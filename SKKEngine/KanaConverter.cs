@@ -9,6 +9,7 @@ public class KanaConverter(AppConfig config)
 {
     private Dictionary<string, string> RomajiToKana { get; set; } = config.RomajiTable;
     private Dictionary<string, string> MoraModifier { get; set; } = config.MoraModifier;
+    private Dictionary<string, string> MoraAutoComplete { get; set; } = config.MoraAutoComplete;
 
     public void UpdateTable(AppConfig config)
     {
@@ -39,6 +40,7 @@ public class KanaConverter(AppConfig config)
         return (false, romaji[..1], romaji[1..]);
     }
 
+    public bool ToFinish(string romaji, out string? mora) => MoraAutoComplete.TryGetValue(romaji, out mora);
     public static string HiraToKatakana(string hiragana) => KanaToKana(hiragana, c => (c >= 'ぁ' && c <= 'ゖ') ? (char)(c + 0x60) : c);
     public static string KataToHiragana(string katakana) => KanaToKana(katakana, c => (c >= 'ァ' && c <= 'ヶ') ? (char)(c - 0x60) : c);
     private static string KanaToKana(string kana, Func<char,char> addOffset)

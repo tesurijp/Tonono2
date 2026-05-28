@@ -53,13 +53,8 @@ public abstract class StateBase
         }
         else if (context.OkuriPrefix == null && context.CompositionBuffer.Length > 0)
         {
-            if (context.RomajiBuffer.Length == 1 && context.RomajiBuffer[0] == 'n')
-            {
-                engine.HandleKanaProduced("ん");
-                context.RomajiBuffer.Clear();
-            }
-            context.OkuriPrefix = char.ToLower(c, CultureInfo.CurrentCulture).ToString();
-            context.ReadingBeforeOkuri = context.CompositionBuffer.ToString();
+            context.OkuriPrefix = char.ToLower(context.RomajiBuffer.First ?? c).ToString();
+            context.ReadingBeforeOkuri = context.CompositionBuffer;
             engine.ChangeState(engine.State);
         }
     }
@@ -119,7 +114,7 @@ public abstract class StateBase
             return Handled(() =>
             {
                 ActionUpperCase(engine, context, c);
-                context.RomajiBuffer.Append(char.ToLower(c, CultureInfo.CurrentCulture));
+                context.RomajiBuffer.Append(char.ToLower(c));
                 engine.TryConvertRomaji();
             });
         }
