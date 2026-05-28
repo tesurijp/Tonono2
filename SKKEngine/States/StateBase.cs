@@ -112,7 +112,7 @@ public abstract class StateBase
         }
 
         var isSymbol = !char.IsLetter(c) && !char.IsDigit(c);
-        var canMatch = engine.kanaConverter.ToKana(c.ToString()) != string.Empty || engine.kanaConverter.IsPotentialPrefix(c.ToString());
+        var canMatch = engine.kanaConverter.CanMatch(c.ToString());
         if (isSymbol && !canMatch)
         {
             if (context.CompositionBuffer.Length == 0 && context.RomajiBuffer.Length == 0)

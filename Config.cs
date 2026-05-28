@@ -11,6 +11,7 @@ namespace Tonono2;
 public class AppConfig
 {
     public Dictionary<string, string> RomajiTable { get; } = [];
+    public Dictionary<string, string> MoraModifier  { get; } = [];
     public Dictionary<string, string> ZenkakuTable { get; } = [];
     public List<string> DictionaryPaths { get; set; } = [];
     public string UserDictionaryPath { get; set; } = "";
@@ -18,7 +19,7 @@ public class AppConfig
     public static string ConfigPath => Path.Combine(AppContext.BaseDirectory, "config.yaml");
 }
 
-[YamlObject] public partial record class RomajiTable(string Vowel, Dictionary<string, string[]> Rows, Dictionary<string, string> Irregular);
+[YamlObject] public partial record class RomajiTable(string Vowel, Dictionary<string, string[]> Rows, Dictionary<string, string> Irregular, Dictionary<string, List<string>> MoraModifier);
 [YamlObject] public partial record class Standard(int Start, int End, int Offset);
 [YamlObject] public partial record class ZenkakuTable(Standard Standard, Dictionary<string, string> Overrides);
 [YamlObject] public partial record class ConfigYaml(string[] DictionaryPaths, string UserDictionaryPath, RomajiTable RomajiTable, ZenkakuTable ZenkakuTable, string[] ViCompatibleApps);
@@ -82,11 +83,20 @@ public static class ConfigLoader
                     appConfig.RomajiTable[key] = kana;
                 }
             }
+        }
 
-            var irregulars = data.RomajiTable.Irregular;
-            foreach (var entry in irregulars)
+        var irregulars = data.RomajiTable.Irregular;
+        foreach (var entry in irregulars)
+        {
+            appConfig.RomajiTable[entry.Key?.ToString() ?? ""] = entry.Value?.ToString() ?? "";
+        }
+
+        appConfig.MoraModifier.Clear();
+        foreach (var (ch, list) in data.RomajiTable.MoraModifier)
+        {
+            foreach (var item in list)
             {
-                appConfig.RomajiTable[entry.Key?.ToString() ?? ""] = entry.Value?.ToString() ?? "";
+                appConfig.MoraModifier[item] = ch;
             }
         }
     }

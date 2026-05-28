@@ -33,6 +33,7 @@ romajiTable:
     ky: [きゃ,きぃ,きゅ,きぇ,きょ]
     sh: [しゃ,し,しゅ,しぇ,しょ]
     sy: [しゃ,しぃ,しゅ,しぇ,しょ]
+    ts: [つぁ,つぃ,つ,つぇ,つぉ]
     ch: [ちゃ,ち,ちゅ,ちぇ,ちょ]
     ty: [ちゃ,ちぃ,ちゅ,ちぇ,ちょ]
     ny: [にゃ,にぃ,にゅ,にぇ,にょ]
@@ -53,6 +54,9 @@ romajiTable:
     "-": ー
     "[": 「
     "]": 」
+  moraModifier:
+    "っ" : [kk, ss, tt, hh, yy, rr, ww, gg, zz, dd, bb, pp, xx, ff, cc, jj]
+    "ん" : [nk, ns, nt, nh, nr, nw, ng, nz, nd, nb, np, nx, nf, nc, nj, nm, mm, mn]
 
 zenkakuTable:
   standard:

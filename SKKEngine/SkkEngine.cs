@@ -16,15 +16,15 @@ public enum SkkState : int
     Hankaku
 }
 
-public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string, string> zenkakuTable, SkkDicManager dictionary)
+public class SkkEngine(AppConfig config, SkkDicManager dictionary)
 {
     public SkkContext Context { get; } = new();
 
     public SkkState State => Context.State;
 
-    internal readonly KanaConverter kanaConverter = new(romajiTable);
+    internal readonly KanaConverter kanaConverter = new(config);
     private readonly DictionaryRegistrar registrar = new(dictionary);
-    internal Dictionary<string, string> zenkakuTable = zenkakuTable;
+    internal Dictionary<string, string> zenkakuTable = config.ZenkakuTable;
 
     public SkkDicManager Dictionary { get; } = dictionary;
 
@@ -32,7 +32,7 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
 
     public void UpdateConfig(AppConfig config)
     {
-        kanaConverter.UpdateTable(config.RomajiTable);
+        kanaConverter.UpdateTable(config);
         zenkakuTable = config.ZenkakuTable;
         Dictionary.Reload(config.DictionaryPaths);
     }
@@ -136,61 +136,19 @@ public class SkkEngine(Dictionary<string, string> romajiTable, Dictionary<string
 
     internal void TryConvertRomaji()
     {
-        while (Context.RomajiBuffer.Length > 0)
+
+        var canstart = Context.IsConversionMode && Context.OkuriPrefix != null && Context.CandidateIndex == -1;
+        var (conversion, handleKana, newromaji) = kanaConverter.ToKanaConvert(Context.RomajiBuffer.ToString(), canstart);
+
+        if (handleKana is not null)
         {
-            var romaji = Context.RomajiBuffer.ToString();
-
-            var kana = kanaConverter.ToKana(romaji);
-            if (!string.IsNullOrEmpty(kana))
-            {
-                HandleKanaProduced(kana);
-                Context.RomajiBuffer.Clear();
-                if (Context.IsConversionMode && Context.OkuriPrefix != null && Context.CandidateIndex == -1)
-                {
-                    StartConversion();
-                }
-                break;
-            }
-
-            if (romaji.StartsWith('n') && romaji.Length >= 2)
-            {
-                var next = romaji[1];
-                var isVowel = "aiueoyn".Contains(next);
-                if (!isVowel)
-                {
-                    HandleKanaProduced("ん");
-                    Context.RomajiBuffer.Remove(0, 1);
-                    continue;
-                }
-                else if (next == 'n')
-                {
-                    HandleKanaProduced("ん");
-                    Context.RomajiBuffer.Remove(0, 2);
-                    continue;
-                }
-            }
-
-            if (romaji.Length >= 2 && romaji[0] == romaji[1] && romaji[0] != 'n' && char.IsLetter(romaji[0]))
-            {
-                HandleKanaProduced("っ");
-                Context.RomajiBuffer.Remove(0, 1);
-                if (Context.IsConversionMode && Context.OkuriPrefix != null && Context.CandidateIndex == -1)
-                {
-                    StartConversion();
-                }
-                continue;
-            }
-
-            if (kanaConverter.IsPotentialPrefix(romaji))
-            {
-                break;
-            }
-            else
-            {
-                DebugLogger.Log($"No match in romaji table for: {Context.RomajiBuffer}. Flushing: {Context.RomajiBuffer[0]}");
-                HandleKanaProduced(Context.RomajiBuffer[0].ToString());
-                Context.RomajiBuffer.Remove(0, 1);
-            }
+            HandleKanaProduced(handleKana);
+        }
+        Context.RomajiBuffer.Clear();
+        Context.RomajiBuffer.Append(newromaji);
+        if (conversion)
+        {
+            StartConversion();
         }
     }
 
