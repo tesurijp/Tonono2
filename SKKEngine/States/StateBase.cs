@@ -4,35 +4,27 @@ using System.Windows;
 
 namespace Tonono2.SKKEngine.States;
 
-public record SkkActionResult(bool IsHandled, Action? Action = null)
+public record SkkActionResult(bool IsHandled, Action Action)
 {
-    public SkkActionResult AppendPreAction(Action action) =>
-        Action is not null ?
-         new(IsHandled, () => { 
-             action(); 
-             Action(); 
-         }) :
-         new(IsHandled, action);
+    public static SkkActionResult operator +(SkkActionResult current, Action postAction) =>
+        new (current.IsHandled, () => { current.Action(); postAction(); });
+    public static SkkActionResult operator +(Action preAction , SkkActionResult current) =>
+        new (current.IsHandled, () => { preAction(); current.Action(); });
 
-    public void Invoke(SkkEngine engine)
-    {
-        if (Action is not null)
+    public void Invoke(SkkEngine engine) =>
+        Application.Current.Dispatcher.Invoke(() =>
         {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                Action();
-                engine.Context.NotifyBufferChanged();
-            });
-        }
-    }
+            Action();
+            engine.Context.NotifyBufferChanged();
+        });
 }
 
 public abstract class StateBase
 {
-    protected static readonly SkkActionResult Passthrough = new(false, null);
-    protected static readonly SkkActionResult HandledOnly = new(true, null);
-    protected static SkkActionResult Handled(Action? action) => new(true, action);
-    protected static SkkActionResult Pass(Action? action) => new(false, action);
+    protected static readonly SkkActionResult Passthrough = new(false, () => { });
+    protected static readonly SkkActionResult HandledOnly = new(true, () => { });
+    protected static SkkActionResult Handled(Action action) => new(true, action);
+    protected static SkkActionResult Pass(Action action) => new(false, action);
 
     protected static SkkActionResult HandleQKey(SkkEngine engine, SkkContext context) =>
         context.IsBufferActive ? Handled(engine.FlipAndCommit) : Handled(engine.ToggleHiraganaKatakana);

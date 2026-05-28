@@ -108,12 +108,7 @@ public static class Keyboard
             {
                 return '\0';
             }
-            var c = str[0];
-            if (char.IsLetter(c))
-            {
-                return shift ? char.ToUpper(c, CultureInfo.CurrentCulture) : char.ToLower(c, CultureInfo.CurrentCulture);
-            }
-            return c;
+            return str[0];
         }
 
         return '\0';

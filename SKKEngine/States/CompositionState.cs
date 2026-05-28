@@ -28,7 +28,7 @@ public class CompositionState : StateBase
             (SkkConstants.VkBack, _, _) => HandleBackspace(engine, context),
             _ => command.Ch.HasValue ? HandleCharInput(engine, context, command.Ch.Value) : Passthrough,
         };
-        return clearCompletion ? result.AppendPreAction(() => ClearCompletion(context)) : result;
+        return clearCompletion ? (() => ClearCompletion(context)) + result : result;
     }
 
     private static SkkActionResult HandleTabCompletion(SkkEngine engine, SkkContext context) => Handled(() =>
