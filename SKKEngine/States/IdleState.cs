@@ -7,9 +7,9 @@ public class IdleState : StateBase
         var context = engine.Context;
         var vkCode = command.VkCode;
 
-        if (IsNavigationKey(vkCode))
+        if(CommonPreCheck(engine,vkCode) is SkkActionResult preresult)
         {
-            return Passthrough;
+            return preresult;
         }
 
         return (vkCode, command.Control, command.Shift) switch

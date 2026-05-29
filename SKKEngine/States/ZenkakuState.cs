@@ -6,9 +6,9 @@ public class ZenkakuState : StateBase
     {
         var vkCode = command.VkCode;
 
-        if (IsNavigationKey(vkCode))
+        if(CommonPreCheck(engine,vkCode) is SkkActionResult preresult)
         {
-            return Passthrough;
+            return preresult;
         }
         if (command.Control && vkCode == SkkConstants.VkJ)
         {

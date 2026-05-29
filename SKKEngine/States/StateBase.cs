@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 using System.Windows;
 
 namespace Tonono2.SKKEngine.States;
@@ -25,6 +24,19 @@ public abstract class StateBase
     protected static readonly SkkActionResult HandledOnly = new(true, () => { });
     protected static SkkActionResult Handled(Action action) => new(true, action);
     protected static SkkActionResult Pass(Action action) => new(false, action);
+
+    protected static SkkActionResult? CommonPreCheck(SkkEngine engine, int vkCode )
+    {
+        if (vkCode == SkkConstants.VkEscape && engine.State != SkkState.Disabled && engine.IsViCompatibleAppActive())
+        {
+            return Pass(engine.CancelAndDisable);
+        }
+        if (IsNavigationKey(vkCode))
+        {
+            return Passthrough;
+        }
+        return null;
+    }
 
     protected static SkkActionResult HandleQKey(SkkEngine engine, SkkContext context) =>
         context.IsBufferActive ? Handled(engine.FlipAndCommit) : Handled(engine.ToggleHiraganaKatakana);
@@ -98,15 +110,13 @@ public abstract class StateBase
             return Handled(() => context.CompositionBuffer.Append(c));
         }
 
+        SkkActionResult Unhandled() => context.IsBufferActive ? Pass(engine.CommitAll) : Passthrough;
+
         var isSymbol = !char.IsLetter(c) && !char.IsDigit(c);
         var canMatch = engine.kanaConverter.CanMatch(c.ToString());
         if (isSymbol && !canMatch)
         {
-            if (context.CompositionBuffer.Length == 0 && context.RomajiBuffer.Length == 0)
-            {
-                return Passthrough;
-            }
-            return Pass(engine.CommitAll);
+            return Unhandled();
         }
 
         if (c != ' ')
@@ -120,11 +130,7 @@ public abstract class StateBase
         }
         else
         {
-            if (context.CompositionBuffer.Length == 0 && context.RomajiBuffer.Length == 0)
-            {
-                return Passthrough;
-            }
-            return Pass(engine.CommitAll);
+            return Unhandled();
         }
     }
 

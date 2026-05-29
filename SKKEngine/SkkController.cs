@@ -67,16 +67,9 @@ public sealed class SkkController : IDisposable
 
     private void OnKeyIntercepted(KeyInfo e)
     {
-        if (e.VirtualKeyCode == SkkConstants.VkEscape && e.IsKeyDown && Engine.State != SkkState.Disabled && IsViCompatibleAppActive())
+        if (e.IsKeyDown)
         {
-            Engine.CancelAndDisable();
-            return;
-        }
-
-        if (Engine.ProcessKey(e.VirtualKeyCode, e.IsKeyDown))
-        {
-            e.Handled = true;
-        }
+            e.Handled = Engine.ProcessKey(e.VirtualKeyCode);
         Engine.Context.NotifyBufferChanged();
     }
 

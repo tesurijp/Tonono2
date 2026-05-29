@@ -7,9 +7,9 @@ public class ConversionState : StateBase
         var context = engine.Context;
         var vkCode = command.VkCode;
 
-        if (IsNavigationKey(vkCode))
+        if(CommonPreCheck(engine,vkCode) is SkkActionResult preresult)
         {
-            return Passthrough;
+            return preresult;
         }
 
         if (context.ListConversion)
@@ -41,7 +41,7 @@ public class ConversionState : StateBase
     private static SkkActionResult HandleCommitAndProcessKeyInNextState(SkkEngine engine, int vkCode) => Handled(() =>
     {
         engine.CommitAll();
-        engine.ProcessKey(vkCode, true);
+        engine.ProcessKey(vkCode);
     });
 
     private static SkkActionResult HandleCancelComposition(SkkEngine engine, SkkContext context) => Handled(() =>

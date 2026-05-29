@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Tonono2.SKKEngine.States;
 using Tonono2.Win32;
 
@@ -25,6 +26,7 @@ public class SkkEngine(AppConfig config, SkkDicManager dictionary)
     internal readonly KanaConverter kanaConverter = new(config);
     private readonly DictionaryRegistrar registrar = new(dictionary);
     internal Dictionary<string, string> zenkakuTable = config.ZenkakuTable;
+    private string[] ViCompatibleApps = [.. config.ViCompatibleApps.Select(s => s.ToLower())];
 
     public SkkDicManager Dictionary { get; } = dictionary;
 
@@ -35,15 +37,11 @@ public class SkkEngine(AppConfig config, SkkDicManager dictionary)
         kanaConverter.UpdateTable(config);
         zenkakuTable = config.ZenkakuTable;
         Dictionary.Reload(config.DictionaryPaths);
+        ViCompatibleApps = [.. config.ViCompatibleApps.Select(s => s.ToLower())];
     }
 
-    public bool ProcessKey(int vkCode, bool isKeyDown)
+    public bool ProcessKey(int vkCode)
     {
-        if (!isKeyDown)
-        {
-            return false;
-        }
-
         var (ctrlPressed, shiftPressed) = Keyboard.GetMetaKeyState();
         var ch = Keyboard.VkToChar(vkCode, shiftPressed);
         var command = new SkkKeyCommand(vkCode, shiftPressed, ctrlPressed, ch == '\0' ? null : ch);
@@ -233,7 +231,7 @@ public class SkkEngine(AppConfig config, SkkDicManager dictionary)
 
     public void CancelAndDisable()
     {
-        ResetBuffers();
+        Context.ResetBuffers();
         ChangeState(SkkState.Disabled);
     }
 
@@ -254,7 +252,7 @@ public class SkkEngine(AppConfig config, SkkDicManager dictionary)
         {
             Context.ProcessKey = ConversionState.ProcessKey;
         }
-        else if (Context.IsConversionMode || Context.IsAbbreviationMode || Context.CompositionBuffer.Length > 0 || Context.RomajiBuffer.Length > 0)
+        else if (Context.IsConversionMode || Context.IsAbbreviationMode || Context.IsBufferActive)
         {
             Context.ProcessKey = CompositionState.ProcessKey;
         }
@@ -282,5 +280,10 @@ public class SkkEngine(AppConfig config, SkkDicManager dictionary)
         {
             OutputManager.SendString(text);
         }
+    }
+    public bool IsViCompatibleAppActive()
+    {
+        var activePath = ActiveProcess.GetActiveProcessPath()?.Replace('/', '\\').ToLower();
+        return !string.IsNullOrEmpty(activePath) && ViCompatibleApps.Any(i => activePath.EndsWith(i, StringComparison.Ordinal));
     }
 }
