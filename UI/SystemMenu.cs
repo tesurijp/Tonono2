@@ -9,14 +9,12 @@ namespace Tonono2.UI;
 
 public sealed class SystemMenu : IDisposable
 {
-    private readonly AppConfig config;
     private readonly TrayIcon trayicon;
     private readonly Icon icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location)!;
     private InfoWindow? infoWindow;
 
-    public SystemMenu(Window ui, AppConfig config)
+    public SystemMenu(Window ui)
     {
-        this.config = config;
         trayicon = new(icon, "Tonono", ui, [
             new("情報", ShowInfoWindow ),
             new("設定", OpenConfig  ),
@@ -40,13 +38,13 @@ public sealed class SystemMenu : IDisposable
 
     private void ShowInfoWindow()
     {
-        if (infoWindow != null && infoWindow.IsLoaded)
+        if (infoWindow is { IsLoaded: true })
         {
             infoWindow.Activate();
         }
         else
         {
-            infoWindow = new(config);
+            infoWindow = new() { DataContext = new InfoViewModel(ConfigLoader.CurrentConfig) };
             infoWindow.Show();
         }
     }

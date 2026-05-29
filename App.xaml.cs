@@ -22,7 +22,7 @@ public partial class App : Application, IDisposable
 
         controller = new();
         ui = new() { DataContext = controller.Engine.Context };
-        trayIcon = new(ui, controller.Config);
+        trayIcon = new(ui);
     }
 
     protected override void OnExit(ExitEventArgs e)
