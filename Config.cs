@@ -18,9 +18,16 @@ public class AppConfig
     public List<string> DictionaryPaths { get; set; } = [];
     public string UserDictionaryPath { get; set; } = "";
     public List<string> ViCompatibleApps { get; set; } = [];
-    public static string ConfigPath => Path.Combine(AppContext.BaseDirectory, "config.yaml");
-
     public bool HasError => Enumerable.Any([RomajiTable.Count, MoraModifier.Count, ZenkakuTable.Count, DictionaryPaths.Count], i => i < 1);
+
+    public static bool HasUserConfig => File.Exists(UserConfigPath);
+    public const string ConfigFileName = "config.yaml";
+    public static string ConfigPath => HasUserConfig ? UserConfigPath : SystemConfigPath;
+    public static string ConfigFolder => HasUserConfig ? UserConfigFolder : SystemConfigFolder;
+    public static readonly string SystemConfigFolder = AppContext.BaseDirectory;
+    public static readonly string SystemConfigPath = Path.Combine(SystemConfigFolder, ConfigFileName);
+    public static readonly string UserConfigFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Tonono2");
+    public static readonly string UserConfigPath = Path.Combine(UserConfigFolder, ConfigFileName);
 }
 
 [YamlObject] public partial record class RomajiTable(string Vowel, Dictionary<string, string[]> Rows, Dictionary<string, string> Irregular, Dictionary<string, List<string>> MoraModifier, Dictionary<string,string> MoraAutoComplete);
@@ -33,7 +40,22 @@ public static class ConfigLoader
     public static Action<AppConfig>? UpdateConfig { get; set; }
     public static AppConfig CurrentConfig { get; private set; } =  new();
 
-    private static FileSystemWatcher? configWatcher;
+    private static readonly FileSystemWatcher systemConfigWatcher = StartWatcher(AppConfig.SystemConfigFolder);
+    private static readonly FileSystemWatcher userConfigWatcher = StartWatcher(AppConfig.UserConfigFolder);
+
+    private static  FileSystemWatcher StartWatcher(string folderpath)
+    {
+        var watcher = new FileSystemWatcher(folderpath, AppConfig.ConfigFileName)
+        {
+            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
+            EnableRaisingEvents = true
+        };
+        watcher.Created += (_, _) => OnConfigChanged();
+        watcher.Changed += (_, _) => OnConfigChanged();
+        watcher.Renamed += (_, _) => OnConfigChanged();
+        watcher.Deleted += (_, _) => OnConfigChanged();
+        return watcher;
+    }
 
     public static AppConfig Reload()
     {
@@ -63,13 +85,6 @@ public static class ConfigLoader
     public static void StartWatch(Action<AppConfig> updateConfig)
     {
         UpdateConfig = updateConfig;
-
-        configWatcher = new FileSystemWatcher(Path.GetDirectoryName(AppConfig.ConfigPath)!, Path.GetFileName(AppConfig.ConfigPath))
-        {
-            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
-            EnableRaisingEvents = true
-        };
-        configWatcher.Changed += (_, _) => OnConfigChanged();
     }
 
     public static AppConfig Load()
@@ -79,7 +94,8 @@ public static class ConfigLoader
     }
     public static void Tidy()
     {
-        configWatcher?.Dispose();
+        systemConfigWatcher.Dispose();
+        userConfigWatcher.Dispose();
     }
 
     private static void OnConfigChanged()
@@ -98,11 +114,12 @@ public static class ConfigLoader
         }
         catch { }
     }
+    private static string PathConvert(string path) => path.Length>0 && path[0] == '.' ?  Path.Combine(AppConfig.ConfigFolder, path) : Path.GetFullPath(path);
 
     private static void LoadDictionaryPath(ConfigYaml data, AppConfig appConfig)
     {
-        appConfig.DictionaryPaths = [.. data.DictionaryPaths.Select(p => Path.Combine(AppContext.BaseDirectory, p))];
-        appConfig.UserDictionaryPath = Path.Combine(AppContext.BaseDirectory, data.UserDictionaryPath);
+        appConfig.DictionaryPaths = [.. data.DictionaryPaths.Select(PathConvert)];
+        appConfig.UserDictionaryPath = PathConvert(data.UserDictionaryPath);
     }
 
     private static void LoadZenkakuTable(ConfigYaml data, AppConfig appConfig)

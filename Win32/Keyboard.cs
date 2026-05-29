@@ -57,7 +57,7 @@ public sealed class KeyboardHook : IDisposable
         }
         catch (Exception ex)
         {
-            var path = Path.Combine(AppContext.BaseDirectory, "exception.txt");
+            var path = Path.Combine(AppConfig.ConfigFolder, "exception.txt");
             File.AppendAllText(path, $"{Environment.NewLine}{ex.GetType()}{Environment.NewLine}{ex.Message}");
             File.AppendAllText(path, $"{Environment.NewLine}{ex.StackTrace}");
         }
