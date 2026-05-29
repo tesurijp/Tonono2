@@ -6,3 +6,4 @@
 using System.Diagnostics.CodeAnalysis;
 
 [assembly: SuppressMessage("Globalization", "CA1304:CultureInfo を指定します")] 
+[assembly: SuppressMessage("Globalization", "CA1311:CultureInfo を指定します")] 
