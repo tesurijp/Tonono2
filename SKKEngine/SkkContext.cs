@@ -136,16 +136,15 @@ public class SkkContext : INotifyPropertyChanged
         Composition = MakeComposition();
         CandidateList = MakeCandidateList();
         StatusText = MakeStatusText();
-        OnPropertyChanged2(nameof(StatusText));
-        OnPropertyChanged2(nameof(RegistrationReading));
-        OnPropertyChanged2(nameof(RegistrationWord));
-        OnPropertyChanged2(nameof(Composition));
-        OnPropertyChanged2(nameof(CandidateList));
-        OnPropertyChanged2(nameof(IsInRegistrationMode));
-        OnPropertyChanged2(nameof(IsVisible));
+        OnPropertyChanged(nameof(StatusText));
+        OnPropertyChanged(nameof(RegistrationReading));
+        OnPropertyChanged(nameof(RegistrationWord));
+        OnPropertyChanged(nameof(Composition));
+        OnPropertyChanged(nameof(CandidateList));
+        OnPropertyChanged(nameof(IsInRegistrationMode));
+        OnPropertyChanged(nameof(IsVisible));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
-    protected virtual void OnPropertyChanged2(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    protected virtual void OnPropertyChanged(string propertyName) { }
+    protected virtual void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

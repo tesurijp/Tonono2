@@ -10,21 +10,20 @@ public record class RegistrationContext(string Reading, SkkState PreviousState)
 
 public class DictionaryRegistrar(SkkDicManager dictionary)
 {
-    private readonly Stack<RegistrationContext> _regStack = new();
+    private readonly Stack<RegistrationContext> regStack = new();
 
-    public int RecursionDepth => _regStack.Count;
-    public bool IsInRegistrationMode => _regStack.Count > 0;
-    
-    public string RegistrationReading => IsInRegistrationMode ? _regStack.Peek().Reading : "";
-    public string RegistrationWord => IsInRegistrationMode ? _regStack.Peek().WordBuffer.ToString() : "";
+    public int RecursionDepth => regStack.Count;
+    public bool IsInRegistrationMode => regStack.Count > 0;
+    public string RegistrationReading => IsInRegistrationMode ? regStack.Peek().Reading : "";
+    public string RegistrationWord => IsInRegistrationMode ? regStack.Peek().WordBuffer.ToString() : "";
 
-    public void Start(string reading, SkkState currentState) => _regStack.Push(new(reading, currentState));
+    public void Start(string reading, SkkState currentState) => regStack.Push(new(reading, currentState));
 
     public SkkState? Cancel()
     {
-        if (_regStack.Count > 0)
+        if (regStack.Count > 0)
         {
-            var ctx = _regStack.Pop();
+            var ctx = regStack.Pop();
             return ctx.PreviousState;
         }
         return null;
@@ -32,9 +31,9 @@ public class DictionaryRegistrar(SkkDicManager dictionary)
 
     public (SkkState prevState, string reading, string word)? Finish()
     {
-        if (_regStack.Count > 0)
+        if (regStack.Count > 0)
         {
-            var ctx = _regStack.Pop();
+            var ctx = regStack.Pop();
             var word = ctx.WordBuffer.ToString();
             if (!string.IsNullOrWhiteSpace(word))
             {
@@ -50,7 +49,7 @@ public class DictionaryRegistrar(SkkDicManager dictionary)
     {
         if (IsInRegistrationMode)
         {
-            _regStack.Peek().WordBuffer.Append(text);
+            regStack.Peek().WordBuffer.Append(text);
         }
     }
 
@@ -58,7 +57,7 @@ public class DictionaryRegistrar(SkkDicManager dictionary)
     {
         if (IsInRegistrationMode)
         {
-            var ctx = _regStack.Peek();
+            var ctx = regStack.Peek();
             if (ctx.WordBuffer.Length > 0)
             {
                 ctx.WordBuffer.Remove(ctx.WordBuffer.Length - 1, 1);
