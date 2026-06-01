@@ -82,16 +82,10 @@ public static class ConfigLoader
         }
     }
 
-    public static void StartWatch(Action<AppConfig> updateConfig)
-    {
-        UpdateConfig = updateConfig;
-    }
+    public static void StartWatch(Action<AppConfig> updateConfig) => UpdateConfig = updateConfig;
 
-    public static AppConfig Load()
-    {
-        CurrentConfig = Reload();
-        return CurrentConfig;
-    }
+    public static AppConfig Load() => CurrentConfig = Reload();
+
     public static void Tidy()
     {
         systemConfigWatcher.Dispose();
