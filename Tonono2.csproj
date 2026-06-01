@@ -11,6 +11,7 @@
     <UseWPF>true</UseWPF>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <ApplicationIcon>TONONO.ICO</ApplicationIcon>
+    <ResDir>resources\</ResDir>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
@@ -18,18 +19,38 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="TONONO.ICO" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="VYaml" Version="1.3.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="resources\**\*">
-      <TargetPath>%(Filename)%(Extension)</TargetPath>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <EmbeddedResource Include="TONONO.ICO" />
   </ItemGroup>
+
+  <ItemGroup>
+    <FilesToDownload Include="SKK-JISYO.L.gz"/>
+    <FilesToDownload Include="SKK-JISYO.jinmei.gz"/>
+  </ItemGroup>
+
+  <Target Name="DownloadRequiredFiles" BeforeTargets="Build" Condition="'$(Configuration)' == 'Debug'">
+    <PropertyGroup>
+      <BaseUrl>https://skk-dev.github.io/dict/</BaseUrl>
+    </PropertyGroup>
+    <DownloadFile SourceUrl="$(BaseUrl)%(FilesToDownload.Identity)" 
+      DestinationFolder="$(ResDir)" Condition="!Exists('$(ResDir)%(FilesToDownload.Identity)')" />
+  </Target>
+
+  <Target Name="RemoveDownloadFiles" AfterTargets="Clean">
+    <ItemGroup>
+      <FilesToClean Include="$(ResDir)%(FilesToDownload.Identity)" />
+    </ItemGroup>
+     <Delete Files="@(FilesToClean)" />
+  </Target>
+
+  <Target Name="CopyResourcesToOutput" AfterTargets="Build">
+    <ItemGroup>
+      <FilesNeedCopy Include="$(ResDir)**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(FilesNeedCopy)" DestinationFiles="@(FilesNeedCopy->'$(OutputPath)\%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>
