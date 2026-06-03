@@ -6,7 +6,7 @@ using Tonono2.Win32;
 
 namespace Tonono2.SKKEngine;
 
-public record class SkkKeyCommand(int VkCode, bool Shift, bool Control, char? Ch);
+public record class SkkKeyCommand(int VkCode, bool Shift, bool Control, char Ch);
 
 public enum SkkState : int
 {
@@ -25,7 +25,7 @@ public class SkkEngine(AppConfig config, SkkDicManager dictionary)
 
     internal readonly KanaConverter kanaConverter = new(config);
     private readonly DictionaryRegistrar registrar = new(dictionary);
-    internal Dictionary<string, string> zenkakuTable = config.ZenkakuTable;
+    internal Dictionary<char, string> zenkakuTable = config.ZenkakuTable;
     private string[] ViCompatibleApps = [.. config.ViCompatibleApps.Select(s => s.ToLower())];
 
     public SkkDicManager Dictionary { get; } = dictionary;
@@ -44,7 +44,7 @@ public class SkkEngine(AppConfig config, SkkDicManager dictionary)
     {
         var (ctrlPressed, shiftPressed) = Keyboard.GetMetaKeyState();
         var ch = Keyboard.VkToChar(vkCode, shiftPressed);
-        var command = new SkkKeyCommand(vkCode, shiftPressed, ctrlPressed, ch == '\0' ? null : ch);
+        var command = new SkkKeyCommand(vkCode, shiftPressed, ctrlPressed, ch);
 
         var result = Context.ProcessKey(this, command);
         result.Invoke(this);

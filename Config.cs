@@ -13,12 +13,24 @@ public class AppConfig
 {
     public Dictionary<string, string> RomajiTable { get; } = [];
     public Dictionary<string, string> MoraModifier { get; } = [];
-    public Dictionary<string, string> ZenkakuTable { get; } = [];
+    public Dictionary<char, string> ZenkakuTable { get; set; } = [];
     public Dictionary<string, string> MoraAutoComplete { get; set; } = [];
     public List<string> DictionaryPaths { get; set; } = [];
     public string UserDictionaryPath { get; set; } = "";
     public List<string> ViCompatibleApps { get; set; } = [];
     public bool HasError => Enumerable.Any([RomajiTable.Count, MoraModifier.Count, ZenkakuTable.Count, DictionaryPaths.Count], i => i < 1);
+
+    public static bool operator ==(AppConfig one, AppConfig other) =>
+        one.UserDictionaryPath == other.UserDictionaryPath &&
+        one.RomajiTable.SequenceEqual(other.RomajiTable) &&
+        one.ZenkakuTable.SequenceEqual(other.ZenkakuTable) &&
+        one.MoraModifier.SequenceEqual(other.MoraModifier) &&
+        one.MoraAutoComplete.SequenceEqual(other.MoraAutoComplete) &&
+        one.DictionaryPaths.SequenceEqual(other.DictionaryPaths) &&
+        one.ViCompatibleApps.SequenceEqual(other.ViCompatibleApps);
+    public static bool operator !=(AppConfig one, AppConfig other) => !(one == other);
+    public override bool Equals(object? obj) => obj is AppConfig other && this == other;
+    public override int GetHashCode() => base.GetHashCode();
 
     public static bool HasUserConfig => File.Exists(UserConfigPath);
     public const string ConfigFileName = "config.yaml";
@@ -31,7 +43,7 @@ public class AppConfig
 }
 
 [YamlObject] public partial record class RomajiTable(string Vowel, Dictionary<string, string[]> Rows, Dictionary<string, string> Irregular, Dictionary<string, List<string>> MoraModifier, Dictionary<string,string> MoraAutoComplete);
-[YamlObject] public partial record class Standard(int Start, int End, int Offset);
+[YamlObject] public partial record class Standard(int Start, int End,int Offset);
 [YamlObject] public partial record class ZenkakuTable(Standard Standard, Dictionary<string, string> Overrides);
 [YamlObject] public partial record class ConfigYaml(string[] DictionaryPaths, string UserDictionaryPath, RomajiTable RomajiTable, ZenkakuTable ZenkakuTable, string[] ViCompatibleApps);
 
@@ -48,7 +60,8 @@ public static class ConfigLoader
         var watcher = new FileSystemWatcher(folderpath, AppConfig.ConfigFileName)
         {
             NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
-            EnableRaisingEvents = true
+            EnableRaisingEvents = true,
+            IncludeSubdirectories = false,
         };
         watcher.Created += (_, _) => OnConfigChanged();
         watcher.Changed += (_, _) => OnConfigChanged();
@@ -122,15 +135,12 @@ public static class ConfigLoader
         var endVal = data.ZenkakuTable.Standard.End;
         var offset = data.ZenkakuTable.Standard.Offset;
 
-        for (var i = startVal; i <= endVal; i++)
-        {
-            appConfig.ZenkakuTable[((char)i).ToString()] = ((char)(i + offset)).ToString();
-        }
+        appConfig.ZenkakuTable = Enumerable.Range(startVal, endVal).Select(i => ((char)i, ((char)(i + offset)).ToString())).ToDictionary();
 
         var overrides = data.ZenkakuTable.Overrides;
-        foreach (var entry in overrides)
+        foreach (var (key, value) in overrides)
         {
-            appConfig.ZenkakuTable[entry.Key.ToString() ?? ""] = entry.Value?.ToString() ?? "";
+            appConfig.ZenkakuTable[key.First()] = value;
         }
     }
 
@@ -141,12 +151,12 @@ public static class ConfigLoader
 
         foreach (var row in rows)
         {
-            var prefix = row.Key?.ToString() ?? "";
+            var prefix = row.Key;
             var kanaList = row.Value;
 
-            for (var i = 0; i < vowels.Length && i < kanaList.Length; i++)
+            for (var i = 0; i < vowels.Length ; i++)
             {
-                var kana = kanaList[i]?.ToString();
+                var kana = kanaList[i];
                 if (!string.IsNullOrEmpty(kana))
                 {
                     var key = prefix + vowels[i];
@@ -156,9 +166,9 @@ public static class ConfigLoader
         }
 
         var irregulars = data.RomajiTable.Irregular;
-        foreach (var entry in irregulars)
+        foreach (var (key, value) in irregulars)
         {
-            appConfig.RomajiTable[entry.Key?.ToString() ?? ""] = entry.Value?.ToString() ?? "";
+            appConfig.RomajiTable[key] = value;
         }
 
         appConfig.MoraModifier.Clear();

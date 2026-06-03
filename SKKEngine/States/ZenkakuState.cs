@@ -14,7 +14,7 @@ public class ZenkakuState : StateBase
         {
             return HandleSwitchState(engine, SkkState.Hiragana);
         }
-        if (command.Ch is char cz && engine.zenkakuTable.TryGetValue(cz.ToString(), out var zenkaku))
+        if (engine.zenkakuTable.TryGetValue(command.Ch , out var zenkaku))
         {
             return Handled(() => engine.CommitProducedText(zenkaku.ToString()));
         }

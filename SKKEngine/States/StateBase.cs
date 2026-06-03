@@ -100,7 +100,7 @@ public abstract class StateBase
 
     protected static SkkActionResult HandleCharInput(SkkEngine engine, SkkContext context, char c)
     {
-        if (char.IsControl(c))
+        if (c == '\0' || char.IsControl(c))
         {
             return Passthrough;
         }

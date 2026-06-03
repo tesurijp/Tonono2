@@ -26,7 +26,7 @@ public class CompositionState : StateBase
             (SkkConstants.VkSpace, _, false) when context.CompletionIndex >= 0 => HandleAcceptCompletionAndStartConversion(engine, context),
             (SkkConstants.VkSpace, _, false) when context.IsBufferActive => Handled(engine.StartConversion),
             (SkkConstants.VkBack, _, _) => HandleBackspace(engine, context),
-            _ => command.Ch.HasValue ? HandleCharInput(engine, context, command.Ch.Value) : Passthrough,
+             _ => HandleCharInput(engine, context, command.Ch),
         };
         return clearCompletion ? (() => ClearCompletion(context)) + result : result;
     }

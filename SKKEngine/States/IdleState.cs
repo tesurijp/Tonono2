@@ -23,7 +23,7 @@ public class IdleState : StateBase
             (SkkConstants.VkBack, false, _) => HandleBackspace(engine,context),
             (SkkConstants.VkReturn, false, false) when context.IsBufferActive => HandleCommitAll(engine),
             (SkkConstants.VkSpace, false, false) when (context.IsConversionMode || context.IsAbbreviationMode) && context.IsBufferActive => Handled(engine.StartConversion),
-            _ => command.Ch.HasValue ? HandleCharInput(engine, context, command.Ch.Value) : Passthrough,
+            _ => HandleCharInput(engine, context, command.Ch),
         };
     }
 }
