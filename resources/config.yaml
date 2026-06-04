@@ -65,7 +65,7 @@ zenkakuTable:
     start: 0x0021
     end: 0x007E
     offset: 0xFEE0
-  overrides:
+  irregular:
     "\\": ＼
     "~": "〜"
     " ": "　"

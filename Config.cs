@@ -9,17 +9,13 @@ using System.Threading;
 
 namespace Tonono2;
 
-public class AppConfig
+public record class AppConfig(
+    Dictionary<string, string> RomajiTable, Dictionary<string, string> MoraModifier, Dictionary<string, string> MoraAutoComplete,
+    Dictionary<char, string> ZenkakuTable,
+    string[] DictionaryPaths, string UserDictionaryPath,
+    string[] ViCompatibleApps)
 {
-    public Dictionary<string, string> RomajiTable { get; } = [];
-    public Dictionary<string, string> MoraModifier { get; } = [];
-    public Dictionary<char, string> ZenkakuTable { get; set; } = [];
-    public Dictionary<string, string> MoraAutoComplete { get; set; } = [];
-    public List<string> DictionaryPaths { get; set; } = [];
-    public string UserDictionaryPath { get; set; } = "";
-    public List<string> ViCompatibleApps { get; set; } = [];
-    public bool HasError => Enumerable.Any([RomajiTable.Count, MoraModifier.Count, ZenkakuTable.Count, DictionaryPaths.Count], i => i < 1);
-
+    public bool HasError => Enumerable.Any([RomajiTable.Count, MoraModifier.Count, ZenkakuTable.Count, DictionaryPaths.Length], i => i < 1);
     public bool HasChange(AppConfig other) => !(
         UserDictionaryPath == other.UserDictionaryPath &&
         RomajiTable.SequenceEqual(other.RomajiTable) &&
@@ -44,25 +40,30 @@ public class AppConfig
 }
 
 [YamlObject] public partial record class RomajiTable(string Vowel, Dictionary<string, string[]> Rows, Dictionary<string, string> Irregular, Dictionary<string, List<string>> MoraModifier, Dictionary<string,string> MoraAutoComplete);
-[YamlObject] public partial record class Standard(int Start, int End,int Offset);
-[YamlObject] public partial record class ZenkakuTable(Standard Standard, Dictionary<string, string> Overrides);
+[YamlObject] public partial record class Standard(char Start, char End,int Offset);
+[YamlObject] public partial record class ZenkakuTable(Standard Standard, Dictionary<string, string> Irregular);
 [YamlObject] public partial record class ConfigYaml(string[] DictionaryPaths, string UserDictionaryPath, RomajiTable RomajiTable, ZenkakuTable ZenkakuTable, string[] ViCompatibleApps);
 
 public static class ConfigLoader
 {
     public static Action<AppConfig>? UpdateConfig { get; set; }
-    public static AppConfig CurrentConfig { get; private set; } =  new();
+    public static AppConfig CurrentConfig { get; private set; } = new([], [], [], [], [], "", []);
 
     private static readonly FileSystemWatcher systemConfigWatcher = StartWatcher(AppConfig.SystemConfigFolder);
     private static readonly FileSystemWatcher userConfigWatcher = StartWatcher(AppConfig.UserConfigFolder);
 
-    private static  FileSystemWatcher StartWatcher(string folderpath)
+    private static FileSystemWatcher StartWatcher(string folderpath)
     {
+        if (!Directory.Exists(folderpath))
+        {
+            Directory.CreateDirectory(folderpath);
+        }
         var watcher = new FileSystemWatcher(folderpath, AppConfig.ConfigFileName)
         {
             NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
             EnableRaisingEvents = true,
             IncludeSubdirectories = false,
+            
         };
         watcher.Created += (_, _) => OnConfigChanged();
         watcher.Changed += (_, _) => OnConfigChanged();
@@ -78,11 +79,12 @@ public static class ConfigLoader
         {
             var yaml = File.ReadAllText(AppConfig.ConfigPath);
             var yamlObj = YamlSerializer.Deserialize<ConfigYaml>(Encoding.UTF8.GetBytes(yaml));
-            var appConfig = new AppConfig();
-            LoadRomajiTable(yamlObj, appConfig);
-            LoadZenkakuTable(yamlObj, appConfig);
-            LoadDictionaryPath(yamlObj, appConfig);
-            LoadViCompatibleApps(yamlObj, appConfig);
+            var (romaji, mora, moraComp) = LoadRomajiTable(yamlObj);
+            var zenkaku = LoadZenkakuTable(yamlObj);
+            var (dics, userdic) = LoadDictionaryPath(yamlObj);
+            var vicompatible = LoadViCompatibleApps(yamlObj);
+
+            var appConfig = new AppConfig(romaji, mora, moraComp, zenkaku, dics, userdic, vicompatible);
             if (appConfig.HasError)
             {
                 throw new FileFormatException("Error loading config.yaml");
@@ -122,67 +124,40 @@ public static class ConfigLoader
         }
         catch { }
     }
-    private static string PathConvert(string path) => path.Length>0 && path[0] == '.' ?  Path.Combine(AppConfig.ConfigFolder, path) : Path.GetFullPath(path);
+    private static string PathConvert(string path) => path.Length > 0 && path[0] == '.' ? Path.Combine(AppConfig.ConfigFolder, path) : Path.GetFullPath(path);
 
-    private static void LoadDictionaryPath(ConfigYaml data, AppConfig appConfig)
-    {
-        appConfig.DictionaryPaths = [.. data.DictionaryPaths.Select(PathConvert)];
-        appConfig.UserDictionaryPath = PathConvert(data.UserDictionaryPath);
-    }
+    private static (string[] systemDic, string userDic) LoadDictionaryPath(ConfigYaml data) =>
+        ([.. data.DictionaryPaths.Select(PathConvert)], PathConvert(data.UserDictionaryPath));
 
-    private static void LoadZenkakuTable(ConfigYaml data, AppConfig appConfig)
+    private static Dictionary<char, string> LoadZenkakuTable(ConfigYaml data)
     {
         var startVal = data.ZenkakuTable.Standard.Start;
         var endVal = data.ZenkakuTable.Standard.End;
         var offset = data.ZenkakuTable.Standard.Offset;
 
-        appConfig.ZenkakuTable = Enumerable.Range(startVal, endVal).Select(i => ((char)i, ((char)(i + offset)).ToString())).ToDictionary();
-
-        var overrides = data.ZenkakuTable.Overrides;
-        foreach (var (key, value) in overrides)
+        var zenkaku = Enumerable.Sequence(startVal, endVal, (char)1).Select(i => (i, ((char)(i + offset)).ToString())).ToDictionary();
+        foreach (var (key, value) in  data.ZenkakuTable.Irregular)
         {
-            appConfig.ZenkakuTable[key.First()] = value;
+            zenkaku[key[0]] = value;
         }
+        return zenkaku;
     }
 
-    private static void LoadRomajiTable(ConfigYaml data, AppConfig appConfig)
+    private static (Dictionary<string, string> romaji, Dictionary<string, string> mora, Dictionary<string, string> moraCompete) LoadRomajiTable(ConfigYaml data)
     {
         var vowels = data.RomajiTable.Vowel;
         var rows = data.RomajiTable.Rows;
 
-        foreach (var row in rows)
+        var romaji = rows.SelectMany(row => vowels.Select((vowel, i) => (key: row.Key + vowel, Kana: row.Value[i])))
+            .Where(x => !string.IsNullOrEmpty(x.Kana)).ToDictionary();
+        foreach (var (key, value) in  data.RomajiTable.Irregular)
         {
-            var prefix = row.Key;
-            var kanaList = row.Value;
-
-            for (var i = 0; i < vowels.Length ; i++)
-            {
-                var kana = kanaList[i];
-                if (!string.IsNullOrEmpty(kana))
-                {
-                    var key = prefix + vowels[i];
-                    appConfig.RomajiTable[key] = kana;
-                }
-            }
+            romaji[key] = value;
         }
 
-        var irregulars = data.RomajiTable.Irregular;
-        foreach (var (key, value) in irregulars)
-        {
-            appConfig.RomajiTable[key] = value;
-        }
-
-        appConfig.MoraModifier.Clear();
-        foreach (var (ch, list) in data.RomajiTable.MoraModifier)
-        {
-            foreach (var item in list)
-            {
-                appConfig.MoraModifier[item] = ch;
-            }
-        }
-        appConfig.MoraAutoComplete = data.RomajiTable.MoraAutoComplete;
+        var mora = data.RomajiTable.MoraModifier.SelectMany(k => k.Value.Select(item => (item, ch: k.Key))).ToDictionary();
+        return (romaji, mora, data.RomajiTable.MoraAutoComplete);
     }
 
-    private static void LoadViCompatibleApps(ConfigYaml data, AppConfig appConfig) =>
-        appConfig.ViCompatibleApps = [.. data.ViCompatibleApps.Select(i => i.Replace('/', '\\'))];
+    private static string[] LoadViCompatibleApps(ConfigYaml data) => [.. data.ViCompatibleApps.Select(i => i.Replace('/', '\\'))];
 }
