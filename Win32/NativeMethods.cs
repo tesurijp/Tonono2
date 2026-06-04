@@ -85,7 +85,7 @@ internal static partial class NativeMethods
     }
 
     [LibraryImport("user32.dll", SetLastError = true, EntryPoint = "SendInput")]
-    internal static partial uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+    internal static partial uint SendInput(uint nInputs, [In] INPUT[] pInputs, int cbSize);
 
     [LibraryImport("user32.dll")]
     internal static partial short GetKeyState(int nVirtKey);
@@ -104,7 +104,7 @@ internal static partial class NativeMethods
 
     [LibraryImport("kernel32.dll", SetLastError = true, StringMarshalling = StringMarshalling.Utf16, EntryPoint = "QueryFullProcessImageNameW")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    internal static partial bool QueryFullProcessImageName(IntPtr hProcess, uint dwFlags, char[] lpExeName, ref uint lpdwSize);
+    internal static partial bool QueryFullProcessImageName(IntPtr hProcess, uint dwFlags, [Out] char[] lpExeName, ref uint lpdwSize);
 
     [LibraryImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -175,7 +175,7 @@ internal static partial class NativeMethods
 
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    internal static partial bool GetKeyboardState(byte[] lpKeyState);
+    internal static partial bool GetKeyboardState([Out] byte[] lpKeyState);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     internal static extern int ToUnicode(uint wVirtKey, uint wScanCode, byte[] lpKeyState, char [] pwszBuff, int cchBuff, uint wFlags);
