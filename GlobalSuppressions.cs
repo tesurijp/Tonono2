@@ -6,4 +6,5 @@
 using System.Diagnostics.CodeAnalysis;
 
 [assembly: SuppressMessage("Globalization", "CA1304:CultureInfo を指定します")] 
-[assembly: SuppressMessage("Globalization", "CA1311:CultureInfo を指定します")] 
+[assembly: SuppressMessage("Globalization", "CA1311:CultureInfo を指定します")]
+[assembly: SuppressMessage("Interoperability", "SYSLIB1054:コンパイル時に P/Invoke マーシャリング コードを生成するには、'DllImportAttribute' の代わりに 'LibraryImportAttribute' を使用します")]

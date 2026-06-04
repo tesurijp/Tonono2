@@ -21,6 +21,6 @@ public static class OutputManager
             inputs.Add(down);
             inputs.Add(up);
         }
-        NativeMethods.SendInput((uint)inputs.Count, inputs.ToArray(), Marshal.SizeOf<NativeMethods.INPUT>());
+        NativeMethods.SendInput((uint)inputs.Count, [.. inputs], Marshal.SizeOf<NativeMethods.INPUT>());
     }
 }
