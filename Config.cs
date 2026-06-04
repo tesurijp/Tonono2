@@ -20,15 +20,15 @@ public class AppConfig
     public List<string> ViCompatibleApps { get; set; } = [];
     public bool HasError => Enumerable.Any([RomajiTable.Count, MoraModifier.Count, ZenkakuTable.Count, DictionaryPaths.Count], i => i < 1);
 
-    public static bool operator ==(AppConfig one, AppConfig other) =>
-        one.UserDictionaryPath == other.UserDictionaryPath &&
-        one.RomajiTable.SequenceEqual(other.RomajiTable) &&
-        one.ZenkakuTable.SequenceEqual(other.ZenkakuTable) &&
-        one.MoraModifier.SequenceEqual(other.MoraModifier) &&
-        one.MoraAutoComplete.SequenceEqual(other.MoraAutoComplete) &&
-        one.DictionaryPaths.SequenceEqual(other.DictionaryPaths) &&
-        one.ViCompatibleApps.SequenceEqual(other.ViCompatibleApps);
-    public static bool operator !=(AppConfig one, AppConfig other) => !(one == other);
+    public bool HasChange(AppConfig other) => !(
+        UserDictionaryPath == other.UserDictionaryPath &&
+        RomajiTable.SequenceEqual(other.RomajiTable) &&
+        ZenkakuTable.SequenceEqual(other.ZenkakuTable) &&
+        MoraModifier.SequenceEqual(other.MoraModifier) &&
+        MoraAutoComplete.SequenceEqual(other.MoraAutoComplete) &&
+        DictionaryPaths.SequenceEqual(other.DictionaryPaths) &&
+        ViCompatibleApps.SequenceEqual(other.ViCompatibleApps)
+        );
 #if DEBUG
     public static bool HasUserConfig => false;
 #else
@@ -114,7 +114,7 @@ public static class ConfigLoader
         try
         {
             CurrentConfig = Reload();
-            if (oldConfig != CurrentConfig)
+            if (oldConfig.HasChange(CurrentConfig))
             {
                 UpdateConfig?.Invoke(CurrentConfig);
                 DebugLogger.Log("config.yaml update success.");
