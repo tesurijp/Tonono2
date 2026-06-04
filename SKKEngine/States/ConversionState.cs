@@ -7,7 +7,7 @@ public class ConversionState : StateBase
         var context = engine.Context;
         var vkCode = command.VkCode;
 
-        if(CommonPreCheck(engine,vkCode) is SkkActionResult preresult)
+        if (CommonPreCheck(engine, vkCode) is SkkActionResult preresult)
         {
             return preresult;
         }
@@ -20,22 +20,25 @@ public class ConversionState : StateBase
                 return HandleSelectCandidateDirectly(engine, context, targetIdx);
             }
         }
-        return (vkCode, command.Control, command.Shift, command.Ch) switch
+        return (vkCode, command.Control, command.Shift) switch
         {
-            (SkkConstants.VkEscape, _, _,_) => HandleCancelComposition(engine, context),
-            (SkkConstants.VkJ, true, _,_) => HandleCommitAll(engine),
-            (SkkConstants.VkG, true, _,_) => HandleCancelComposition(engine, context),
-            (SkkConstants.VkN, true, _,_) => HandleNextCandidate(engine, context),
-            (SkkConstants.VkP, true, _,_) => HandleBackCandidate(engine, context),
-            (SkkConstants.VkX, true, _,_) when context.CandidateIndex >= 0 && context.CandidateIndex < context.Candidates.Count => HandleRemoveWord(engine, context),
-            (_, true, _,_) => Passthrough,
-            (SkkConstants.VkSpace, _, false,_) => HandleNextPage(engine, context),
-            (SkkConstants.VkBack, _, _,_) => HandleCancelComposition(engine, context),
-            (SkkConstants.VkReturn, _, _,_) => HandleCommitAll(engine),
-            (SkkConstants.VkQ, _, _,_) => HandleCommitAll(engine),
-            (_, _, _, '\0') => Passthrough,
-            (_, _, _, var c ) when char.IsControl(c) => Pass(engine.CommitAll),
-            _ => HandleCommitAndProcessKeyInNextState(engine, vkCode),
+            (SkkConstants.VkEscape, _, _) => HandleCancelComposition(engine, context),
+            (SkkConstants.VkJ, true, _) => HandleCommitAll(engine),
+            (SkkConstants.VkG, true, _) => HandleCancelComposition(engine, context),
+            (SkkConstants.VkN, true, _) => HandleNextCandidate(engine, context),
+            (SkkConstants.VkP, true, _) => HandleBackCandidate(engine, context),
+            (SkkConstants.VkX, true, _) when context.CandidateIndex >= 0 && context.CandidateIndex < context.Candidates.Count => HandleRemoveWord(engine, context),
+            (_, true, _) => Passthrough,
+            (SkkConstants.VkSpace, _, false) => HandleNextPage(engine, context),
+            (SkkConstants.VkBack, _, _) => HandleCancelComposition(engine, context),
+            (SkkConstants.VkReturn, _, _) => HandleCommitAll(engine),
+            (SkkConstants.VkQ, _, _) => HandleCommitAll(engine),
+            _ => command.Ch switch
+            {
+                '\0' => Passthrough,
+                var c when char.IsControl(c) => Pass(engine.CommitAll),
+                _ => HandleCommitAndProcessKeyInNextState(engine, vkCode),
+            }
         };
     }
 
