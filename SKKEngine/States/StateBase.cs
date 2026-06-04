@@ -49,25 +49,36 @@ public abstract class StateBase
         engine.ChangeState(engine.State);
     });
 
-    protected static void ActionUpperCase(SkkEngine engine, SkkContext context, char c)
+    protected static SkkActionResult HandleRomajiCandidate(SkkEngine engine, SkkContext context, char c)
     {
-        if (!char.IsUpper(c) || !char.IsLetter(c))
+        var actionresult = Handled(() =>
         {
-            return;
-        }
+            context.RomajiBuffer.Append(char.ToLower(c));
+            engine.TryConvertRomaji();
+        });
 
-        if (!context.IsConversionMode)
+        if (char.IsUpper(c) && char.IsLetter(c))
         {
-            context.IsConversionMode = true;
-            context.OkuriPrefix = null;
-            context.ReadingBeforeOkuri = "";
-            engine.ChangeState(engine.State);
+            return (() =>
+            {
+                if (!context.IsConversionMode)
+                {
+                    context.IsConversionMode = true;
+                    context.OkuriPrefix = null;
+                    context.ReadingBeforeOkuri = "";
+                    engine.ChangeState(engine.State);
+                }
+                else if (context.OkuriPrefix == null && context.CompositionBuffer.Length > 0)
+                {
+                    context.OkuriPrefix = char.ToLower(context.RomajiBuffer.First ?? c).ToString();
+                    context.ReadingBeforeOkuri = context.CompositionBuffer;
+                    engine.ChangeState(engine.State);
+                }
+            }) + actionresult;
         }
-        else if (context.OkuriPrefix == null && context.CompositionBuffer.Length > 0)
+        else
         {
-            context.OkuriPrefix = char.ToLower(context.RomajiBuffer.First ?? c).ToString();
-            context.ReadingBeforeOkuri = context.CompositionBuffer;
-            engine.ChangeState(engine.State);
+            return actionresult;
         }
     }
 
@@ -121,12 +132,7 @@ public abstract class StateBase
 
         if (c != ' ')
         {
-            return Handled(() =>
-            {
-                ActionUpperCase(engine, context, c);
-                context.RomajiBuffer.Append(char.ToLower(c));
-                engine.TryConvertRomaji();
-            });
+            return HandleRomajiCandidate(engine, context, c);
         }
         else
         {
