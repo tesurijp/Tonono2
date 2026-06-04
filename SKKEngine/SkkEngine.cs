@@ -244,17 +244,17 @@ public class SkkEngine(AppConfig config, SkkDicManager dictionary)
     internal void ChangeState(SkkState newState)
     {
         Context.State = newState;
-        if (IsInRegistrationMode)
-        {
-            Context.ProcessKey = RegistrationState.ProcessKey;
-        }
-        else if (Context.CandidateIndex >= 0)
+        if (Context.CandidateIndex >= 0)
         {
             Context.ProcessKey = ConversionState.ProcessKey;
         }
         else if (Context.IsConversionMode || Context.IsAbbreviationMode || Context.IsBufferActive)
         {
             Context.ProcessKey = CompositionState.ProcessKey;
+        }
+        else if (IsInRegistrationMode)
+        {
+            Context.ProcessKey = RegistrationState.ProcessKey;
         }
         else
         {
