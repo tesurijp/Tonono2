@@ -29,10 +29,11 @@ public class AppConfig
         one.DictionaryPaths.SequenceEqual(other.DictionaryPaths) &&
         one.ViCompatibleApps.SequenceEqual(other.ViCompatibleApps);
     public static bool operator !=(AppConfig one, AppConfig other) => !(one == other);
-    public override bool Equals(object? obj) => obj is AppConfig other && this == other;
-    public override int GetHashCode() => base.GetHashCode();
-
+#if DEBUG
+    public static bool HasUserConfig => false;
+#else
     public static bool HasUserConfig => File.Exists(UserConfigPath);
+#endif
     public const string ConfigFileName = "config.yaml";
     public static string ConfigPath => HasUserConfig ? UserConfigPath : SystemConfigPath;
     public static string ConfigFolder => HasUserConfig ? UserConfigFolder : SystemConfigFolder;
