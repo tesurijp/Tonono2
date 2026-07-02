@@ -58,10 +58,10 @@ public class SkkContext : INotifyPropertyChanged
         sb.Append('[', RecursionDepth + 1);
         var state = State switch
         {
-            SkkState.Hiragana => "あ",
-            SkkState.Katakana => "ア",
-            SkkState.Zenkaku => "全",
-            _ => "？"
+            SkkState.Hiragana => "��",
+            SkkState.Katakana => "�A",
+            SkkState.Zenkaku => "�S",
+            _ => "�H"
         };
         sb.Append(state);
         sb.Append(']', RecursionDepth + 1);
@@ -136,13 +136,20 @@ public class SkkContext : INotifyPropertyChanged
         Composition = MakeComposition();
         CandidateList = MakeCandidateList();
         StatusText = MakeStatusText();
-        OnPropertyChanged(nameof(StatusText));
-        OnPropertyChanged(nameof(RegistrationReading));
-        OnPropertyChanged(nameof(RegistrationWord));
-        OnPropertyChanged(nameof(Composition));
-        OnPropertyChanged(nameof(CandidateList));
-        OnPropertyChanged(nameof(IsInRegistrationMode));
         OnPropertyChanged(nameof(IsVisible));
+        if (IsVisible)
+        {
+            OnPropertyChanged(nameof(StatusText));
+            OnPropertyChanged(nameof(RecursionDepth));
+            OnPropertyChanged(nameof(Composition));
+            OnPropertyChanged(nameof(CandidateList));
+            OnPropertyChanged(nameof(IsInRegistrationMode));
+            if (IsInRegistrationMode)
+            {
+                OnPropertyChanged(nameof(RegistrationReading));
+                OnPropertyChanged(nameof(RegistrationWord));
+            }
+        }
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
