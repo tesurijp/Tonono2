@@ -58,10 +58,10 @@ public class SkkContext : INotifyPropertyChanged
         sb.Append('[', RecursionDepth + 1);
         var state = State switch
         {
-            SkkState.Hiragana => "��",
-            SkkState.Katakana => "�A",
-            SkkState.Zenkaku => "�S",
-            _ => "�H"
+            SkkState.Hiragana => "あ",
+            SkkState.Katakana => "ア",
+            SkkState.Zenkaku => "全",
+            _ => "？"
         };
         sb.Append(state);
         sb.Append(']', RecursionDepth + 1);
