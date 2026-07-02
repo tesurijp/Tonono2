@@ -15,6 +15,7 @@ public class KanaConverter(AppConfig config)
     {
         RomajiToKana = config.RomajiTable;
         MoraModifier = config.MoraModifier;
+        MoraAutoComplete = config.MoraAutoComplete;
     }
 
     private bool IsPotentialPrefix(string romaji) => RomajiToKana.Keys.Any(k => k.StartsWith(romaji, StringComparison.Ordinal));
@@ -34,6 +35,12 @@ public class KanaConverter(AppConfig config)
         if (IsPotentialPrefix(romaji))
         {
             return (false, "", romaji);
+        }
+
+        if (romaji.Length > 1 && ToFinish(romaji[..^1], out var finishedMora))
+        {
+            var (_, nextOut, resultEmoji) = ToKanaConvert(romaji[^1..], false);
+            return (false, finishedMora + nextOut , resultEmoji);
         }
 
         DebugLogger.Log($"No match in romaji table for: {romaji}. Flushing: {romaji[..1]}");
