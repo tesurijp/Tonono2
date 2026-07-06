@@ -70,6 +70,11 @@ public abstract class StateBase
                 }
                 else if (context.OkuriPrefix == null && context.CompositionBuffer.Length > 0)
                 {
+                    if( engine.kanaConverter.ToFinish( context.RomajiBuffer, out var mora))
+                    {
+                        context.CompositionBuffer.Append(mora!);
+                        context.RomajiBuffer.Remove(0, 1);
+                    }
                     context.OkuriPrefix = char.ToLower(context.RomajiBuffer.First ?? c).ToString();
                     context.ReadingBeforeOkuri = context.CompositionBuffer;
                     engine.ChangeState(engine.State);
