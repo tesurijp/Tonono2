@@ -50,6 +50,8 @@ public class ConversionState : StateBase
 
     private static SkkActionResult HandleCancelComposition(SkkEngine engine, SkkContext context) => Handled(() =>
     {
+        context.OkuriPrefix = null;
+        context.ReadingBeforeOkuri = "";
         context.CandidateIndex = -1;
         engine.ChangeState(engine.State);
     });
