@@ -64,8 +64,10 @@ public class SkkEngine(AppConfig config, SkkDicManager dictionary)
         var prevState = registrar.Cancel();
         if (prevState.HasValue)
         {
+            Context.IsConversionMode = true;
+            Context.CompositionBuffer.Clear();
+            Context.CompositionBuffer.Append(Context.RegistrationReading);
             ChangeState(prevState.Value);
-            ResetBuffers();
             SyncRegistrationState();
         }
     }
