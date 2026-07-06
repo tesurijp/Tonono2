@@ -13,11 +13,12 @@ public sealed class SystemMenu : IDisposable
     private readonly Icon icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location)!;
     private InfoWindow? infoWindow;
 
-    public SystemMenu(Window ui)
+    public SystemMenu(Window ui, Action restartAction)
     {
         trayicon = new(icon, "Tonono", ui, [
             new("情報", ShowInfoWindow ),
             new("設定", OpenConfig  ),
+            new("再起動", restartAction ),
             new(null, () => { } ),
             new("終了", Application.Current.Shutdown )
             ]);
