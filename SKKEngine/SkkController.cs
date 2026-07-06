@@ -25,7 +25,6 @@ public sealed class SkkController : IDisposable
         if (e.IsKeyDown)
         {
             e.Handled = Engine.ProcessKey(e.VirtualKeyCode);
-            Engine.Context.NotifyBufferChanged();
         }
     }
     public void Dispose()
