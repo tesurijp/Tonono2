@@ -171,6 +171,10 @@ public class SkkEngine(AppConfig config, SkkDicManager dictionary)
 
     internal void FlipAndCommit()
     {
+        if( kanaConverter.ToFinish( Context.RomajiBuffer, out var mora))
+        {
+            Context.CompositionBuffer.Append(mora!);
+        }
         string text = Context.CompositionBuffer;
         if (Context.State == SkkState.Hiragana)
         {
