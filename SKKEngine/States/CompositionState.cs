@@ -56,8 +56,7 @@ public class CompositionState : StateBase
 
     private static SkkActionResult HandleAcceptCompletionAndStartConversion(SkkEngine engine, SkkContext context) => Handled(() =>
     {
-        context.CompositionBuffer.Clear();
-        context.CompositionBuffer.Append(context.Completions[context.CompletionIndex]);
+        context.CompositionBuffer = context.Completions[context.CompletionIndex];
         context.CompletionIndex = -1;
         context.Completions.Clear();
         engine.StartConversion();

@@ -65,8 +65,7 @@ public class SkkEngine(AppConfig config, SkkDicManager dictionary)
         if (prevState.HasValue)
         {
             Context.IsConversionMode = true;
-            Context.CompositionBuffer.Clear();
-            Context.CompositionBuffer.Append(Context.RegistrationReading);
+            Context.CompositionBuffer = Context.RegistrationReading;
             ChangeState(prevState.Value);
             SyncRegistrationState();
         }
@@ -116,7 +115,7 @@ public class SkkEngine(AppConfig config, SkkDicManager dictionary)
         if (kanaConverter.ToFinish(Context.RomajiBuffer, out var fin))
         {
             HandleKanaProduced(fin!);
-            Context.RomajiBuffer.Clear();
+            Context.RomajiBuffer = "";
         }
         var key = GetDictionaryKey();
         Context.Candidates = [ .. Dictionary.GetCandidates(key) ];
@@ -143,8 +142,7 @@ public class SkkEngine(AppConfig config, SkkDicManager dictionary)
         {
             HandleKanaProduced(handleKana);
         }
-        Context.RomajiBuffer.Clear();
-        Context.RomajiBuffer.Append(newromaji);
+        Context.RomajiBuffer = newromaji;
         if (conversion)
         {
             StartConversion();
@@ -160,7 +158,7 @@ public class SkkEngine(AppConfig config, SkkDicManager dictionary)
 
         if (Context.IsConversionMode)
         {
-            Context.CompositionBuffer.Append(kana);
+            Context.CompositionBuffer += kana;
             ChangeState(Context.State); // Ensure we are in CompositionState
         }
         else
@@ -173,7 +171,7 @@ public class SkkEngine(AppConfig config, SkkDicManager dictionary)
     {
         if( kanaConverter.ToFinish( Context.RomajiBuffer, out var mora))
         {
-            Context.CompositionBuffer.Append(mora!);
+            Context.CompositionBuffer += mora!;
         }
         string text = Context.CompositionBuffer;
         if (Context.State == SkkState.Hiragana)

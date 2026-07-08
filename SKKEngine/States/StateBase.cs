@@ -53,7 +53,7 @@ public abstract class StateBase
     {
         var actionresult = Handled(() =>
         {
-            context.RomajiBuffer.Append(char.ToLower(c));
+            context.RomajiBuffer += char.ToLower(c);
             engine.TryConvertRomaji();
         });
 
@@ -70,12 +70,12 @@ public abstract class StateBase
                 }
                 else if (context.OkuriPrefix == null && context.CompositionBuffer.Length > 0)
                 {
-                    if( engine.kanaConverter.ToFinish( context.RomajiBuffer, out var mora))
+                    if (engine.kanaConverter.ToFinish(context.RomajiBuffer, out var mora))
                     {
-                        context.CompositionBuffer.Append(mora!);
-                        context.RomajiBuffer.Remove(0, 1);
+                        context.CompositionBuffer += mora!;
+                        context.RomajiBuffer = context.RomajiBuffer[1..];
                     }
-                    context.OkuriPrefix = char.ToLower(context.RomajiBuffer.First ?? c).ToString();
+                    context.OkuriPrefix = char.ToLower(context.RomajiBuffer.Length > 0 ? context.RomajiBuffer[0] : c).ToString();
                     context.ReadingBeforeOkuri = context.CompositionBuffer;
                     engine.ChangeState(engine.State);
                 }
@@ -91,13 +91,13 @@ public abstract class StateBase
     {
         if (context.RomajiBuffer.Length > 0)
         {
-            return Handled(() => context.RomajiBuffer.Remove(context.RomajiBuffer.Length - 1, 1));
+            return Handled(() => context.RomajiBuffer = context.RomajiBuffer[..^1]);
         }
         if (context.CompositionBuffer.Length > 0)
         {
             return Handled(() =>
             {
-                context.CompositionBuffer.Remove(context.CompositionBuffer.Length - 1, 1);
+                context.CompositionBuffer = context.CompositionBuffer[..^1];
                 if (context.CompositionBuffer.Length == 0)
                 {
                     context.IsConversionMode = false;
@@ -123,7 +123,7 @@ public abstract class StateBase
 
         if (context.IsAbbreviationMode)
         {
-            return Handled(() => context.CompositionBuffer.Append(c));
+            return Handled(() => context.CompositionBuffer += c);
         }
 
         SkkActionResult Unhandled() => context.IsBufferActive ? Pass(engine.CommitAll) : Passthrough;

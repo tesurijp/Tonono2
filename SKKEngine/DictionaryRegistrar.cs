@@ -5,7 +5,7 @@ namespace Tonono2.SKKEngine;
 
 public record class RegistrationContext(string Reading, SkkState PreviousState)
 {
-    public StringBuilder WordBuffer { get; } = new();
+    public string WordBuffer { get; set; } = "";
 }
 
 public class DictionaryRegistrar(SkkDicManager dictionary)
@@ -15,7 +15,7 @@ public class DictionaryRegistrar(SkkDicManager dictionary)
     public int RecursionDepth => regStack.Count;
     public bool IsInRegistrationMode => regStack.Count > 0;
     public string RegistrationReading => IsInRegistrationMode ? regStack.Peek().Reading : "";
-    public string RegistrationWord => IsInRegistrationMode ? regStack.Peek().WordBuffer.ToString() : "";
+    public string RegistrationWord => IsInRegistrationMode ? regStack.Peek().WordBuffer : "";
 
     public void Start(string reading, SkkState currentState) => regStack.Push(new(reading, currentState));
 
@@ -34,7 +34,7 @@ public class DictionaryRegistrar(SkkDicManager dictionary)
         if (regStack.Count > 0)
         {
             var ctx = regStack.Pop();
-            var word = ctx.WordBuffer.ToString();
+            var word = ctx.WordBuffer;
             if (!string.IsNullOrWhiteSpace(word))
             {
                 dictionary.AddWord(ctx.Reading, word);
@@ -49,7 +49,7 @@ public class DictionaryRegistrar(SkkDicManager dictionary)
     {
         if (IsInRegistrationMode)
         {
-            regStack.Peek().WordBuffer.Append(text);
+            regStack.Peek().WordBuffer += text;
         }
     }
 
@@ -60,7 +60,7 @@ public class DictionaryRegistrar(SkkDicManager dictionary)
             var ctx = regStack.Peek();
             if (ctx.WordBuffer.Length > 0)
             {
-                ctx.WordBuffer.Remove(ctx.WordBuffer.Length - 1, 1);
+                ctx.WordBuffer = ctx.WordBuffer[..^1];
             }
         }
     }

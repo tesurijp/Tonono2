@@ -2,35 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
-using System.Xml.Serialization;
 using Tonono2.SKKEngine.States;
 
 namespace Tonono2.SKKEngine;
 
-public class StrBuf
-{
-    private readonly StringBuilder sb = new();
-    private StrBuf WrapAction(Action act)
-    {
-        act();
-        return this;
-    }
-    public StrBuf Append(string str) => WrapAction(() => sb.Append(str));
-    public StrBuf Append(char ch) => WrapAction(() => sb.Append(ch));
-    public StrBuf Remove(int st, int len) => WrapAction(() => sb.Remove(st, len));
-    public StrBuf Clear() => WrapAction(() => sb.Clear());
-    public int Length => sb.Length;
-    public char? First => sb.Length>0 ? sb[0] : null;
-    public override string ToString() => sb.ToString();
-
-    public static implicit operator string(StrBuf current) => current.ToString();
-}
-
 public class SkkContext : INotifyPropertyChanged
 {
     public Func<SkkEngine, SkkKeyCommand, SkkActionResult> ProcessKey { get; set; } = DisabledState.ProcessKey;
-    public StrBuf RomajiBuffer { get; } = new();
-    public StrBuf CompositionBuffer { get; } = new();
+    public string RomajiBuffer { get; set; } = "";
+    public string CompositionBuffer { get; set; } = "";
     public SkkState State { get; set; } = SkkState.Disabled;
     public bool IsConversionMode { get; set; }
     public bool IsAbbreviationMode { get; set; }
@@ -128,8 +108,8 @@ public class SkkContext : INotifyPropertyChanged
         Candidates.Clear();
         CompletionIndex = -1;
         Completions.Clear();
-        CompositionBuffer.Clear();
-        RomajiBuffer.Clear();
+        CompositionBuffer = "";
+        RomajiBuffer = "";
     }
     internal void NotifyBufferChanged()
     {
