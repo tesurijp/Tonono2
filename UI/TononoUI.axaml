@@ -1,0 +1,63 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Tonono2.UI.TononoUI"
+        Title="Tonono2"
+        Width="10"
+        Height="10"
+        SizeToContent="WidthAndHeight"
+        Background="Transparent"
+        TransparencyBackgroundFallback="#E01F2128"
+        TransparencyLevelHint="Transparent"
+        SystemDecorations="None"
+        ShowActivated="False"
+        ShowInTaskbar="False"
+        Topmost="True"
+        CanResize="False"
+        CanMinimize="False"
+        CanMaximize="False"
+        WindowStartupLocation="Manual"
+        IsHitTestVisible="False">
+  <Border Margin="4"
+          Padding="10,6"
+          CornerRadius="8"
+          Background="#B81B1F26"
+          BorderBrush="#99F2F4F8"
+          BorderThickness="1">
+    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+      <TextBlock Text="{Binding StatusText}"
+                 Foreground="#F8FAFC"
+                 FontSize="18"
+                 FontWeight="Bold"
+                 VerticalAlignment="Center"/>
+      <StackPanel Orientation="Horizontal"
+                  Spacing="6"
+                  IsVisible="{Binding IsInRegistrationMode}">
+        <TextBlock Text="【読】"
+                   Foreground="#BFC7D1"
+                   FontSize="14"
+                   VerticalAlignment="Center"/>
+        <TextBlock Text="{Binding RegistrationReading}"
+                   Foreground="#7DD3FC"
+                   FontSize="18"
+                   VerticalAlignment="Center"/>
+        <TextBlock Text="【語】"
+                   Foreground="#BFC7D1"
+                   FontSize="14"
+                   VerticalAlignment="Center"/>
+        <TextBlock Text="{Binding RegistrationWord}"
+                   Foreground="#86EFAC"
+                   FontSize="18"
+                   VerticalAlignment="Center"/>
+      </StackPanel>
+      <TextBlock Text="{Binding Composition}"
+                 Foreground="#F8FAFC"
+                 FontSize="18"
+                 VerticalAlignment="Center"/>
+      <TextBlock Text="{Binding CandidateList}"
+                 Margin="6,0,0,0"
+                 Foreground="#FDE68A"
+                 FontSize="16"
+                 VerticalAlignment="Center"/>
+    </StackPanel>
+  </Border>
+</Window>

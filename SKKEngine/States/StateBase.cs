@@ -1,5 +1,5 @@
 using System;
-using System.Windows;
+using Avalonia.Threading;
 
 namespace Tonono2.SKKEngine.States;
 
@@ -11,7 +11,7 @@ public record SkkActionResult(bool IsHandled, Action Action)
         new (current.IsHandled, () => { preAction(); current.Action(); });
 
     public void Invoke(SkkEngine engine) =>
-        Application.Current.Dispatcher.Invoke(() =>
+        Dispatcher.UIThread.Post(() =>
         {
             Action();
             engine.Context.NotifyBufferChanged();

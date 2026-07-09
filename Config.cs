@@ -87,7 +87,7 @@ public static class ConfigLoader
             var appConfig = new AppConfig(romaji, mora, moraComp, zenkaku, dics, userdic, vicompatible);
             if (appConfig.HasError)
             {
-                throw new FileFormatException("Error loading config.yaml");
+                throw new InvalidDataException("Error loading config.yaml");
             }
             return appConfig;
         }

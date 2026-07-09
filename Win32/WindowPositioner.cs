@@ -1,5 +1,6 @@
 using System;
-using System.Windows;
+using Avalonia.Controls;
+using Avalonia.Controls.Platform;
 using static Tonono2.Win32.NativeConstants;
 
 namespace Tonono2.Win32;
@@ -61,10 +62,14 @@ public static class WindowPositioner
     }
     public static void SetNonActiveWindow(Window window)
     {
-        var helper = new System.Windows.Interop.WindowInteropHelper(window);
-        var hwnd = helper.Handle;
-        var currentStyle = NativeMethods.GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+        var handle = window.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+        if (handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var currentStyle = NativeMethods.GetWindowLongPtr(handle, GWL_EXSTYLE);
         var newStyle = new IntPtr(currentStyle | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW);
-        NativeMethods.SetWindowLongPtr(hwnd, GWL_EXSTYLE, newStyle);
+        NativeMethods.SetWindowLongPtr(handle, GWL_EXSTYLE, newStyle);
     }
 }

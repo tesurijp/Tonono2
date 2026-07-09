@@ -1,7 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Windows;
-using Tonono2.SKKEngine;
 
 namespace Tonono2.UI;
 
@@ -14,12 +12,4 @@ public class InfoViewModel(AppConfig cfg)
     public IEnumerable<KeyValuePair<string, string>> MoraAutoCompleteEntries => cfg.MoraAutoComplete.OrderBy(kv => kv.Key);
     public IEnumerable<string> DictionaryPaths => cfg.DictionaryPaths;
     public IEnumerable<string> ViCompatibleApps => cfg.ViCompatibleApps;
-}
-
-public partial class InfoWindow : Window
-{
-    public InfoWindow()
-    {
-        InitializeComponent();
-    }
 }

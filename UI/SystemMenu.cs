@@ -1,29 +1,56 @@
 using System;
 using System.Diagnostics;
-using System.Drawing;
-using System.Reflection;
-using System.Windows;
-using Tonono2.Win32;
+using Avalonia.Controls;
+using Avalonia.Platform;
 
 namespace Tonono2.UI;
 
 public sealed class SystemMenu : IDisposable
 {
     private readonly TrayIcon trayicon;
-    private readonly Icon icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location)!;
     private InfoWindow? infoWindow;
 
-    public SystemMenu(Window ui, Action restartAction)
+    public SystemMenu(Action restartAction, Action shutdownAction)
     {
-        trayicon = new(icon, "Tonono", ui, [
-            new("情報", ShowInfoWindow ),
-            new("設定", OpenConfig  ),
-            new("再起動", restartAction ),
-            new(null, () => { } ),
-            new("終了", Application.Current.Shutdown )
-            ]);
+        trayicon = new TrayIcon
+        {
+            Icon = LoadWindowIcon(),
+            ToolTipText = "Tonono",
+            Menu = CreateMenu(restartAction, shutdownAction),
+            IsVisible = true
+        };
     }
 
+    public static WindowIcon LoadWindowIcon()
+    {
+        using var stream = AssetLoader.Open(new Uri("avares://Tonono2/TONONO.ICO"));
+        return new WindowIcon(stream);
+    }
+
+    private NativeMenu CreateMenu(Action restartAction, Action shutdownAction)
+    {
+        var menu = new NativeMenu();
+
+        var info = new NativeMenuItem { Header = "情報" };
+        info.Click += (_, _) => ShowInfoWindow();
+        menu.Add(info);
+
+        var config = new NativeMenuItem { Header = "設定" };
+        config.Click += (_, _) => OpenConfig();
+        menu.Add(config);
+
+        var restart = new NativeMenuItem { Header = "再起動" };
+        restart.Click += (_, _) => restartAction();
+        menu.Add(restart);
+
+        menu.Add(new NativeMenuItemSeparator());
+
+        var exit = new NativeMenuItem { Header = "終了" };
+        exit.Click += (_, _) => shutdownAction();
+        menu.Add(exit);
+
+        return menu;
+    }
 
     private static void OpenConfig()
     {
@@ -39,13 +66,14 @@ public sealed class SystemMenu : IDisposable
 
     private void ShowInfoWindow()
     {
-        if (infoWindow is { IsLoaded: true })
+        if (infoWindow is { IsVisible: true })
         {
             infoWindow.Activate();
         }
         else
         {
             infoWindow = new() { DataContext = new InfoViewModel(ConfigLoader.CurrentConfig) };
+            infoWindow.Closed += (_, _) => infoWindow = null;
             infoWindow.Show();
         }
     }
@@ -53,7 +81,7 @@ public sealed class SystemMenu : IDisposable
     public void Dispose()
     {
         infoWindow?.Close();
-        trayicon?.Dispose();
-        icon.Dispose();
+        trayicon.IsVisible = false;
+        trayicon.Dispose();
     }
 }

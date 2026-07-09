@@ -1,0 +1,204 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Tonono2.UI.InfoWindow"
+        Title="Tonono2 Information"
+        Width="920"
+        Height="620"
+        MinWidth="760"
+        MinHeight="520"
+        Topmost="True"
+        WindowStartupLocation="CenterScreen"
+        Background="#F4F6F8">
+  <Grid Margin="14" RowDefinitions="Auto,*">
+    <Border Grid.Row="0"
+            Margin="0,0,0,12"
+            Padding="16,14"
+            CornerRadius="10"
+            Background="#FFFDFD"
+            BorderBrush="#FFD0D7DE"
+            BorderThickness="1">
+      <StackPanel Spacing="4">
+        <TextBlock Text="Tonono2 SKK-Like System"
+                   FontSize="22"
+                   FontWeight="Bold"
+                   Foreground="#FF1F2937"/>
+        <TextBlock Text="Version 1.1.0"
+                   Foreground="#FF475569"/>
+        <TextBlock Text=".NET 10 (C#) / AvaloniaUI"
+                   Foreground="#FF64748B"/>
+      </StackPanel>
+    </Border>
+
+    <Border Grid.Row="1"
+            Padding="10"
+            CornerRadius="10"
+            Background="#FFFFFFFF"
+            BorderBrush="#FFD0D7DE"
+            BorderThickness="1">
+      <TabControl>
+        <TabItem Header="全般">
+          <ScrollViewer>
+            <StackPanel Margin="12" Spacing="12">
+              <Border Padding="12"
+                      Background="#FFF8FAFC"
+                      BorderBrush="#FFD8E1E8"
+                      BorderThickness="1"
+                      CornerRadius="8">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="設定パス"
+                             FontWeight="Bold"
+                             Foreground="#FF334155"/>
+                  <TextBox Text="{Binding ConfigPath}"
+                           IsReadOnly="True"
+                           Background="#FFFFFFFF"
+                           BorderBrush="#FFCBD5E1"
+                           BorderThickness="1"/>
+                </StackPanel>
+              </Border>
+
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                <Border Grid.Column="0"
+                        Padding="12"
+                        Background="#FFF8FAFC"
+                        BorderBrush="#FFD8E1E8"
+                        BorderThickness="1"
+                        CornerRadius="8">
+                  <StackPanel Spacing="8">
+                    <TextBlock Text="読み込み済み辞書"
+                               FontWeight="Bold"
+                               Foreground="#FF334155"/>
+                    <ListBox ItemsSource="{Binding DictionaryPaths}"
+                             Height="220"
+                             BorderBrush="#FFCBD5E1"
+                             BorderThickness="1"/>
+                  </StackPanel>
+                </Border>
+
+                <Border Grid.Column="1"
+                        Padding="12"
+                        Background="#FFF8FAFC"
+                        BorderBrush="#FFD8E1E8"
+                        BorderThickness="1"
+                        CornerRadius="8">
+                  <StackPanel Spacing="8">
+                    <TextBlock Text="Vi互換アプリ (ESCの特殊処理)"
+                               FontWeight="Bold"
+                               Foreground="#FF334155"/>
+                    <ListBox ItemsSource="{Binding ViCompatibleApps}"
+                             Height="220"
+                             BorderBrush="#FFCBD5E1"
+                             BorderThickness="1"/>
+                  </StackPanel>
+                </Border>
+              </Grid>
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+        <TabItem Header="仮名変換">
+          <ScrollViewer>
+            <StackPanel Margin="12" Spacing="12">
+              <Border Padding="10"
+                      Background="#FFF8FAFC"
+                      BorderBrush="#FFD8E1E8"
+                      BorderThickness="1"
+                      CornerRadius="8">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="ローマ字変換"
+                             FontWeight="Bold"
+                             Foreground="#FF334155"/>
+                  <DataGrid ItemsSource="{Binding RomajiEntries}"
+                            AutoGenerateColumns="False"
+                            IsReadOnly="True"
+                            GridLinesVisibility="All"
+                            BorderBrush="#FFCBD5E1"
+                            BorderThickness="1"
+                            Height="220">
+                    <DataGrid.Columns>
+                      <DataGridTextColumn Header="ローマ字" Binding="{Binding Key}" Width="160" />
+                      <DataGridTextColumn Header="かな" Binding="{Binding Value}" Width="*" />
+                    </DataGrid.Columns>
+                  </DataGrid>
+                </StackPanel>
+              </Border>
+
+              <Border Padding="10"
+                      Background="#FFF8FAFC"
+                      BorderBrush="#FFD8E1E8"
+                      BorderThickness="1"
+                      CornerRadius="8">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="撥音・促音加工"
+                             FontWeight="Bold"
+                             Foreground="#FF334155"/>
+                  <DataGrid ItemsSource="{Binding MoraModifierEntries}"
+                            AutoGenerateColumns="False"
+                            IsReadOnly="True"
+                            GridLinesVisibility="All"
+                            BorderBrush="#FFCBD5E1"
+                            BorderThickness="1"
+                            Height="180">
+                    <DataGrid.Columns>
+                      <DataGridTextColumn Header="入力" Binding="{Binding Key}" Width="160" />
+                      <DataGridTextColumn Header="修飾" Binding="{Binding Value}" Width="*" />
+                    </DataGrid.Columns>
+                  </DataGrid>
+                </StackPanel>
+              </Border>
+
+              <Border Padding="10"
+                      Background="#FFF8FAFC"
+                      BorderBrush="#FFD8E1E8"
+                      BorderThickness="1"
+                      CornerRadius="8">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="末尾撥音補完"
+                             FontWeight="Bold"
+                             Foreground="#FF334155"/>
+                  <DataGrid ItemsSource="{Binding MoraAutoCompleteEntries}"
+                            AutoGenerateColumns="False"
+                            IsReadOnly="True"
+                            GridLinesVisibility="All"
+                            BorderBrush="#FFCBD5E1"
+                            BorderThickness="1"
+                            Height="160">
+                    <DataGrid.Columns>
+                      <DataGridTextColumn Header="入力" Binding="{Binding Key}" Width="160" />
+                      <DataGridTextColumn Header="補完" Binding="{Binding Value}" Width="*" />
+                    </DataGrid.Columns>
+                  </DataGrid>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+        <TabItem Header="全角直接入力">
+          <Border Margin="12"
+                  Padding="10"
+                  Background="#FFF8FAFC"
+                  BorderBrush="#FFD8E1E8"
+                  BorderThickness="1"
+                  CornerRadius="8">
+            <StackPanel Spacing="8">
+              <TextBlock Text="全角直接入力テーブル"
+                         FontWeight="Bold"
+                         Foreground="#FF334155"/>
+              <DataGrid ItemsSource="{Binding ZenkakuEntries}"
+                        AutoGenerateColumns="False"
+                        IsReadOnly="True"
+                        GridLinesVisibility="All"
+                        BorderBrush="#FFCBD5E1"
+                        BorderThickness="1">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="変換元" Binding="{Binding Key}" Width="160" />
+                  <DataGridTextColumn Header="全角" Binding="{Binding Value}" Width="*" />
+                </DataGrid.Columns>
+              </DataGrid>
+            </StackPanel>
+          </Border>
+        </TabItem>
+      </TabControl>
+    </Border>
+  </Grid>
+</Window>
