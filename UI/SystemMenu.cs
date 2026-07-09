@@ -29,27 +29,21 @@ public sealed class SystemMenu : IDisposable
 
     private NativeMenu CreateMenu(Action restartAction, Action shutdownAction)
     {
-        var menu = new NativeMenu();
-
-        var info = new NativeMenuItem { Header = "情報" };
-        info.Click += (_, _) => ShowInfoWindow();
-        menu.Add(info);
-
-        var config = new NativeMenuItem { Header = "設定" };
-        config.Click += (_, _) => OpenConfig();
-        menu.Add(config);
-
-        var restart = new NativeMenuItem { Header = "再起動" };
-        restart.Click += (_, _) => restartAction();
-        menu.Add(restart);
-
-        menu.Add(new NativeMenuItemSeparator());
-
-        var exit = new NativeMenuItem { Header = "終了" };
-        exit.Click += (_, _) => shutdownAction();
-        menu.Add(exit);
-
+        var menu = new NativeMenu
+        {
+            makeMenu("情報", ShowInfoWindow),
+            makeMenu("設定", OpenConfig),
+            makeMenu("再起動", restartAction),
+            new NativeMenuItemSeparator(),
+            makeMenu("終了", shutdownAction)
+        };
         return menu;
+        static NativeMenuItem makeMenu(string header, Action act)
+        {
+            var menu = new NativeMenuItem { Header = header };
+            menu.Click += (_, _) => act();
+            return menu;
+        }
     }
 
     private static void OpenConfig()
