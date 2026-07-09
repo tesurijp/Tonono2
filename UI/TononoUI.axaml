@@ -1,6 +1,9 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:skk="using:Tonono2.SKKEngine"
         x:Class="Tonono2.UI.TononoUI"
+        x:DataType="skk:SkkContext"
+        x:CompileBindings="True"
         Title="Tonono2"
         Width="10"
         Height="10"
@@ -8,7 +11,7 @@
         Background="Transparent"
         TransparencyBackgroundFallback="#D21F2128"
         TransparencyLevelHint="Transparent"
-        SystemDecorations="None"
+        WindowDecorations="None"
         ShowActivated="False"
         ShowInTaskbar="False"
         Topmost="True"
@@ -26,32 +29,32 @@
           BorderBrush="#99F2F4F8"
           BorderThickness="1">
     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
-      <TextBlock Text="{Binding StatusText}"
+      <TextBlock Text="{CompiledBinding StatusText}"
                  Foreground="#F8FAFC"
                  FontWeight="Bold"
                  VerticalAlignment="Center"/>
       <StackPanel Orientation="Horizontal"
                   Spacing="4"
-                  IsVisible="{Binding IsInRegistrationMode}">
+                  IsVisible="{CompiledBinding IsInRegistrationMode}">
         <TextBlock Text="【読】"
                    Foreground="#BFC7D1"
                    FontSize="12"
                    VerticalAlignment="Center"/>
-        <TextBlock Text="{Binding RegistrationReading}"
+        <TextBlock Text="{CompiledBinding RegistrationReading}"
                    Foreground="#7DD3FC"
                    VerticalAlignment="Center"/>
         <TextBlock Text="【語】"
                    Foreground="#BFC7D1"
                    FontSize="12"
                    VerticalAlignment="Center"/>
-        <TextBlock Text="{Binding RegistrationWord}"
+        <TextBlock Text="{CompiledBinding RegistrationWord}"
                    Foreground="#86EFAC"
                    VerticalAlignment="Center"/>
       </StackPanel>
-      <TextBlock Text="{Binding Composition}"
+      <TextBlock Text="{CompiledBinding Composition}"
                  Foreground="#F8FAFC"
                  VerticalAlignment="Center"/>
-      <TextBlock Text="{Binding CandidateList}"
+      <TextBlock Text="{CompiledBinding CandidateList}"
                  Margin="3,0,0,0"
                  Foreground="#FDE68A"
                  FontSize="14"

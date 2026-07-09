@@ -48,9 +48,29 @@ public static class ConfigLoader
 {
     public static Action<AppConfig>? UpdateConfig { get; set; }
     public static AppConfig CurrentConfig { get; private set; } = new([], [], [], [], [], "", []);
+    private static readonly YamlSerializerOptions serializerOptions = CreateSerializerOptions();
 
     private static readonly FileSystemWatcher systemConfigWatcher = StartWatcher(AppConfig.SystemConfigFolder);
     private static readonly FileSystemWatcher userConfigWatcher = StartWatcher(AppConfig.UserConfigFolder);
+
+    private static YamlSerializerOptions CreateSerializerOptions()
+    {
+        GeneratedResolver.Register(new ConfigYaml.ConfigYamlGeneratedFormatter());
+        GeneratedResolver.Register(new RomajiTable.RomajiTableGeneratedFormatter());
+        GeneratedResolver.Register(new Standard.StandardGeneratedFormatter());
+        GeneratedResolver.Register(new ZenkakuTable.ZenkakuTableGeneratedFormatter());
+        GeneratedResolver.Register(new ArrayFormatter<string>());
+        GeneratedResolver.Register(new ListFormatter<string>());
+        GeneratedResolver.Register(new DictionaryFormatter<string, string>());
+        GeneratedResolver.Register(new DictionaryFormatter<string, string[]>());
+        GeneratedResolver.Register(new DictionaryFormatter<string, List<string>>());
+        var generatedResolver = new GeneratedResolver();
+
+        return new YamlSerializerOptions
+        {
+            Resolver = CompositeResolver.Create([generatedResolver, BuiltinResolver.Instance, StandardResolver.Instance])
+        };
+    }
 
     private static FileSystemWatcher StartWatcher(string folderpath)
     {
@@ -78,7 +98,7 @@ public static class ConfigLoader
         try
         {
             var yaml = File.ReadAllText(AppConfig.ConfigPath);
-            var yamlObj = YamlSerializer.Deserialize<ConfigYaml>(Encoding.UTF8.GetBytes(yaml));
+            var yamlObj = YamlSerializer.Deserialize<ConfigYaml>(Encoding.UTF8.GetBytes(yaml), serializerOptions);
             var (romaji, mora, moraComp) = LoadRomajiTable(yamlObj);
             var zenkaku = LoadZenkakuTable(yamlObj);
             var (dics, userdic) = LoadDictionaryPath(yamlObj);
