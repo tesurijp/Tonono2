@@ -51,12 +51,14 @@
                         <TextBlock Text="読み込み済み辞書" Grid.Row="2" FontWeight="Bold" />
                         <ListBox Grid.Row="3"
                                  ItemsSource="{CompiledBinding DictionaryPaths}"
+                                 Background="#FFFFFFFF"
                                  BorderBrush="#FFCBD5E1"
                                  BorderThickness="1"/>
 
                         <TextBlock Text="Vi互換アプリ (ESCの特殊処理)" Grid.Row="4" FontWeight="Bold"/>
                         <ListBox Grid.Row="5"
                                  ItemsSource="{CompiledBinding ViCompatibleApps}"
+                                 Background="#FFFFFFFF"
                                  BorderBrush="#FFCBD5E1"
                                  BorderThickness="1"/>
                     </Grid>
