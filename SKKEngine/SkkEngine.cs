@@ -131,7 +131,7 @@ public class SkkEngine(AppConfig config, SkkDicManager dictionary)
         }
     }
 
-    internal string GetDictionaryKey() => Context.OkuriPrefix != null ? Context.ReadingBeforeOkuri + Context.OkuriPrefix : Context.CompositionBuffer;
+    internal string GetDictionaryKey() => KanaConverter.KataToHiragana(Context.OkuriPrefix != null ? Context.ReadingBeforeOkuri + Context.OkuriPrefix : Context.CompositionBuffer);
 
     internal void TryConvertRomaji()
     {
