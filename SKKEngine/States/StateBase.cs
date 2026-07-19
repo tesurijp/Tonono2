@@ -157,7 +157,7 @@ public abstract class StateBase
         context.IsBufferActive || context.IsConversionMode ? Handled(engine.ResetBuffers) : Passthrough;
 
     protected static SkkActionResult HandleCommonCtrlKeys(SkkEngine engine, SkkContext context, int vkCode) =>
-        vkCode == SkkConstants.VkJ ? HandleCommitAll(engine) :
+        vkCode == SkkConstants.VkJ ? Handled(() => { engine.CommitAll(); engine.ChangeState(SkkState.Hiragana); }) :
         vkCode == SkkConstants.VkG ? HandleTryResetBuffers(engine, context) :
         Passthrough;
 }
