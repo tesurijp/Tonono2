@@ -100,7 +100,7 @@ NativeAoT にも対応(仮) させています。
 - `zenkakuTable`
   全角英数モードでの変換表です。
 
-同梱の [resources/config.yaml](/C:/work/otherRepo/Tonono2/resources/config.yaml) がサンプルです。
+同梱の [resources/config.yaml](resources/config.yaml) がサンプルです。
 
 ## 辞書
 
